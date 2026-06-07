@@ -14,7 +14,7 @@ class CoreFacade(Protocol):
 
 def run_core_job(job_type: JobType, params: dict[str, Any], facade: CoreFacade | None = None) -> dict[str, Any]:
     if facade is None:
-        from web_core_reference import api as facade
+        from app_core import api as facade
 
     runners = {
         JobType.stt: facade.run_stt,

@@ -34,7 +34,7 @@ class JobService:
         return JobDetail.model_validate(job | {"events": events})
 
     def cancel_job(self, job_id: str) -> JobRead:
-        from web_core_reference.configure.config import app_cfg
+        from app_core.configure.config import app_cfg
 
         app_cfg.stoped_uuid_set.add(job_id)
         self.repository.add_event(job_id, "stop", "job canceled")

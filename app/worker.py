@@ -65,7 +65,7 @@ class JobWorker:
 
     def _connect_signal_hub(self) -> None:
         try:
-            from web_core_reference.configure.signal_hub import SignalHub
+            from app_core.configure.signal_hub import SignalHub
         except Exception:
             return
 

@@ -6,13 +6,16 @@ from fastapi import FastAPI, HTTPException
 
 from app.config import settings
 from app.db import JobRepository
-from app.models import JobCreate, JobDetail, JobRead, OutputList, ProviderList
+from app.models import JobCreate, JobDetail, JobRead, OutputList, ProviderList, RuntimeCheckRead
 from app.providers import list_providers
+from app.runtime_config import load_runtime_config
+from app.runtime_checks import check_runtime
 from app.service import JobService
 from app.worker import JobWorker
 
 
 def build_service() -> JobService:
+    load_runtime_config()
     repository = JobRepository(settings.database_path)
     worker = JobWorker(repository)
     return JobService(repository, worker, settings.outputs_dir)
@@ -68,3 +71,8 @@ def get_outputs(job_id: str) -> OutputList:
 def providers() -> ProviderList:
     return list_providers()
 
+
+
+@app.get("/runtime/checks", response_model=list[RuntimeCheckRead])
+def runtime_checks() -> list[RuntimeCheckRead]:
+    return [RuntimeCheckRead.model_validate(check.__dict__) for check in check_runtime()]

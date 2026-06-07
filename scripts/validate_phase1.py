@@ -16,12 +16,12 @@ def run(command: list[str]) -> None:
 
 
 def main() -> None:
-    paths = ["web_core_reference", "app", "tests", "scripts/smoke_api.py"]
+    paths = ["app_core", "app", "tests", "scripts/smoke_api.py", "scripts/smoke_real_video.py"]
     for path in paths:
         if not compileall.compile_file(ROOT / path, quiet=1) if Path(path).suffix == ".py" else not compileall.compile_dir(ROOT / path, quiet=1):
             raise SystemExit(1)
     run([sys.executable, "-m", "pytest", "-q"])
-    run([sys.executable, "scripts/smoke_api.py"])
+    run([sys.executable, "scripts/smoke_api.py", "scripts/smoke_real_video.py"])
 
 
 if __name__ == "__main__":
