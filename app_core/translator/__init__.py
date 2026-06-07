@@ -764,3 +764,28 @@ def get_mkv_code(code):
     }
     return langcode.get(code,code)
 
+
+# ??,?????????????????????
+def run(*, translate_type=CHATGPT_INDEX,
+        text_list=None,
+        is_test=False,
+        source_code=None,
+        target_code=None,
+        uuid=None) -> Union[List, str, None]:
+    translate_type = int(translate_type)
+    target_language_name = target_code
+    if translate_type in AI_TRANS_CHANNELS:
+        _, target_language_name = get_source_target_code(show_target=target_code, translate_type=translate_type)
+    kwargs = {
+        "text_list": text_list,
+        "target_language_name": target_language_name,
+        "source_code": source_code if source_code and source_code not in ['-', 'No'] else 'auto',
+        "target_code": target_code,
+        "uuid": uuid,
+        "is_test": is_test,
+        "translate_type": translate_type,
+    }
+    _cls: Union[Type[BaseTrans], None] = get_class(translate_type, "translator", _ID_NAME_DICT)
+    if _cls is None:
+        raise RuntimeError(f'No this Translation Channel:{translate_type}')
+    return _cls(**kwargs).run()  # type:ignore

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 
 from app.models import JobCreate, JobType
@@ -25,7 +26,7 @@ def default_payload(video_path: Path) -> dict:
         "model_name": "nova-3",
         "translate_type": 3,
         "tts_type": 28,
-        "voice_role": "vi-VN-HoaiMyNeural",
+        "voice_role": os.getenv("VOICE_OVER_DEFAULT_VOICE_ROLE", "HoaiMy(Female)"),
         "app_mode": "biaozhun",
         "subtitle_type": 0,
         "output_srt": 0,
@@ -33,14 +34,24 @@ def default_payload(video_path: Path) -> dict:
     }
 
 
-def print_checks() -> bool:
+def print_checks(required: set[tuple[str, int | None]] | None = None) -> bool:
     checks = check_runtime()
     ok = True
     for check in checks:
         print(json.dumps(check.__dict__, ensure_ascii=False))
-        if check.status != "ready":
+        selected = required is None or (check.provider_kind, check.provider_id) in required
+        if selected and check.status != "ready":
             ok = False
     return ok
+
+
+def required_checks_for_payload(payload: dict) -> set[tuple[str, int | None]]:
+    return {
+        ("stt", int(payload["recogn_type"])),
+        ("tts", int(payload["tts_type"])),
+        ("translator", int(payload["translate_type"])),
+        ("system", None),
+    }
 
 
 def main() -> None:
@@ -53,13 +64,13 @@ def main() -> None:
     if not video_path.exists():
         raise SystemExit(f"video not found: {video_path}")
 
-    ready = print_checks()
     payload = default_payload(video_path)
+    ready = print_checks(required_checks_for_payload(payload) if args.run else None)
     print(json.dumps({"job_type": "video_translate", "params": payload}, ensure_ascii=False, indent=2))
     if not args.run:
         return
     if not ready:
-        raise SystemExit("runtime checks failed; fill .env/install dependencies before --run")
+        raise SystemExit("selected runtime checks failed; fill .env/install dependencies before --run")
 
     smoke_dir = ROOT_DIR / "data" / "real_smoke"
     repo = JobRepository(smoke_dir / "real_smoke.db")

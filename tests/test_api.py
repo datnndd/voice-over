@@ -20,7 +20,13 @@ def test_job_api_create_get_cancel_and_outputs(tmp_path):
 
         detail = client.get(f"/jobs/{job_id}")
         assert detail.status_code == 200
-        assert detail.json()["params"]["uuid"] == job_id
+        params = detail.json()["params"]
+        assert params["uuid"] == job_id
+        assert params["basename"] == "test.mp4"
+        assert params["noextname"] == "test"
+        assert params["ext"] == "mp4"
+        assert params["targetdir_mp4"].endswith("/test.mp4")
+        assert not params["targetdir_mp4"].endswith("/None.mp4")
 
         outputs = client.get(f"/jobs/{job_id}/outputs")
         assert outputs.status_code == 200

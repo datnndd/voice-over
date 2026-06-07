@@ -21,7 +21,7 @@ class RuntimeCheck:
 PROVIDER_REQUIREMENTS = {
     ("stt", recognition.Deepgram): {
         "params": ["deepgram_apikey"],
-        "modules": ["deepgram", "deepgram_captions", "httpx"],
+        "modules": ["deepgram", "deepgram_captions", "httpx", "zhconv"],
     },
     ("stt", recognition.FUNASR_CN): {
         "params": [],
