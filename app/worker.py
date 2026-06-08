@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import queue
+import re
 import threading
 from pathlib import Path
 from typing import Any
@@ -8,6 +9,33 @@ from typing import Any
 from app.core_facade import CoreFacade, run_core_job
 from app.db import JobRepository
 from app.models import JobStatus, JobType, OutputFile
+
+
+def _progress_from_event(event_type: str, text: str) -> int | None:
+    normalized_type = event_type.lower()
+    normalized_text = text.lower()
+    percent_match = re.search(r"(?<!\d)(\d{1,3})(?:\.\d+)?\s*%", text)
+    if percent_match:
+        return max(0, min(99, int(percent_match.group(1))))
+    if normalized_type in {"succeed", "end"}:
+        return 100
+    if normalized_type == "error":
+        return None
+    phase_markers = (
+        ("starting", 8),
+        ("load", 12),
+        ("recognition", 20),
+        ("subtitle", 35),
+        ("translat", 55),
+        ("tts", 70),
+        ("compose", 88),
+        ("merge", 90),
+        ("output", 95),
+    )
+    for marker, progress in phase_markers:
+        if marker in normalized_text:
+            return progress
+    return None
 
 
 class JobWorker:
@@ -38,7 +66,7 @@ class JobWorker:
         job = self.repository.get_job(job_id)
         if job["status"] == JobStatus.canceled.value:
             return job
-        self.repository.update_status(job_id, JobStatus.running)
+        self.repository.update_status(job_id, JobStatus.running, progress_percent=5)
         self.repository.add_event(job_id, "logs", "job started")
         try:
             result = run_core_job(JobType(job["type"]), job["params"], self.facade)
@@ -48,7 +76,7 @@ class JobWorker:
                 return self.repository.get_job(job_id)
             if result.get("status") == "success":
                 self.repository.add_event(job_id, "succeed", "job succeeded")
-                return self.repository.update_status(job_id, JobStatus.succeeded, target_dir=target_dir)
+                return self.repository.update_status(job_id, JobStatus.succeeded, target_dir=target_dir, progress_percent=100)
             error = result.get("error") or "core job failed"
             self.repository.add_event(job_id, "error", error)
             return self.repository.update_status(job_id, JobStatus.failed, error=error, target_dir=target_dir)
@@ -76,9 +104,14 @@ class JobWorker:
                 self.repository.get_job(uuid)
             except KeyError:
                 return
-            event_type = getattr(data, "type", "logs") or "logs"
-            text = getattr(data, "text", "") if data is not None else ""
-            self.repository.add_event(uuid, str(event_type), str(text))
+            event_type = str(getattr(data, "type", "logs") or "logs")
+            text = str(getattr(data, "text", "") if data is not None else "")
+            self.repository.add_event(uuid, event_type, text)
+            progress = getattr(data, "percent", None) if data is not None else None
+            if progress is None:
+                progress = _progress_from_event(event_type, text)
+            if progress is not None:
+                self.repository.update_progress(uuid, int(float(progress)))
 
         SignalHub.instance().new_message.connect(_record_event)
 

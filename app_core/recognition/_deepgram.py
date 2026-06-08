@@ -1,4 +1,5 @@
 import logging
+import warnings
 import os
 import re
 from dataclasses import dataclass
@@ -13,12 +14,89 @@ from deepgram import (
 )
 from deepgram_captions import DeepgramConverter, srt
 from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_not_exception_type, before_log, after_log
-from app_core.configure.excepts import NO_RETRY_EXCEPT
+from app_core.configure.excepts import NO_RETRY_EXCEPT, SpeechToTextError
 from app_core.configure.config import tr,params,settings,logger
 from app_core.recognition._base import BaseRecogn
 from app_core.task.taskcfg import SrtItem
 from app_core.util import tools
 from app_core.configure import contants
+
+
+_DEEPGRAM_NOVA3_GENERAL_LANGUAGES = {
+    'multi', 'ar', 'ar-AE', 'ar-SA', 'ar-QA', 'ar-KW', 'ar-SY', 'ar-LB', 'ar-PS', 'ar-JO', 'ar-EG', 'ar-SD', 'ar-TD', 'ar-MA', 'ar-DZ', 'ar-TN', 'ar-IQ', 'ar-IR',
+    'be', 'bn', 'bs', 'bg', 'ca', 'zh-HK', 'zh', 'zh-CN', 'zh-Hans', 'zh-TW', 'zh-Hant', 'hr', 'cs', 'da', 'da-DK', 'nl',
+    'en', 'en-US', 'en-AU', 'en-GB', 'en-IN', 'en-NZ', 'et', 'fi', 'nl-BE', 'fr', 'fr-CA', 'de', 'de-CH', 'el', 'gu', 'gu-IN',
+    'he', 'hi', 'hu', 'id', 'it', 'ja', 'kn', 'ko', 'ko-KR', 'lv', 'lt', 'mk', 'ms', 'mr', 'no', 'fa', 'pl', 'pt', 'pt-BR', 'pt-PT',
+    'ro', 'ru', 'sr', 'sk', 'sl', 'es', 'es-419', 'sv', 'sv-SE', 'tl', 'ta', 'te', 'th', 'th-TH', 'tr', 'uk', 'ur', 'vi',
+}
+_DEEPGRAM_NOVA3_MODELS = {'nova-3', 'nova-3-general'}
+_DEEPGRAM_LEGACY_MODELS = {
+    'nova-3-medical', 'nova-2', 'nova-2-general', 'enhanced', 'enhanced-general', 'base', 'base-general',
+    'whisper-large', 'whisper-medium', 'whisper', 'whisper-small', 'whisper-base', 'whisper-tiny',
+}
+
+
+def _deepgram_model_name(model_name: str | None) -> str:
+    normalized = (model_name or '').strip()
+    if not normalized or normalized in _DEEPGRAM_LEGACY_MODELS:
+        return 'nova-3'
+    if normalized in _DEEPGRAM_NOVA3_MODELS:
+        return normalized
+    raise SpeechToTextError(f'Deepgram only supports nova-3 in this app, got model={normalized}')
+
+
+def _validate_deepgram_language(model_name: str | None, language: str | None) -> None:
+    if not language:
+        return
+    model = _deepgram_model_name(model_name)
+    if language not in _DEEPGRAM_NOVA3_GENERAL_LANGUAGES:
+        allowed_preview = ', '.join(sorted(_DEEPGRAM_NOVA3_GENERAL_LANGUAGES)[:24])
+        raise SpeechToTextError(
+            f'Deepgram model/language mismatch: model={model}, language={language}. '
+            f'Choose one supported Nova 3 language. Examples: {allowed_preview}'
+        )
+
+
+def _deepgram_language_code(language: str | None) -> str | None:
+    if not language:
+        return language
+    raw = language.strip()
+    normalized = raw.lower().replace('_', '-')
+    if normalized == 'auto':
+        return None
+    chinese_aliases = {
+        'zh-cn': 'zh-CN',
+        'zh-hans': 'zh-Hans',
+        'zh-sg': 'zh-CN',
+        'zh-tw': 'zh-TW',
+        'zh-hant': 'zh-Hant',
+        'zh-hk': 'zh-HK',
+        'zh-mo': 'zh-HK',
+        'yue': 'zh-HK',
+        'yue-hk': 'zh-HK',
+        'cantonese': 'zh-HK',
+        'mandarin': 'zh',
+    }
+    if normalized in chinese_aliases:
+        return chinese_aliases[normalized]
+    if normalized.startswith('zh-'):
+        return chinese_aliases.get(normalized, raw)
+    return raw
+
+
+def _deepgram_caption_line_length(language: str | None) -> int:
+    lang = (language or '').lower()
+    if lang[:2] in ['zh', 'ja', 'ko']:
+        return int(settings.get('cjk_len'))
+    return int(settings.get('other_len'))
+
+
+def _deepgram_srt_from_response(response: object, language: str | None) -> str:
+    transcription = DeepgramConverter(response)
+    srt_text = srt(transcription, line_length=_deepgram_caption_line_length(language))
+    if not srt_text or not srt_text.strip():
+        raise SpeechToTextError('Deepgram returned an empty SRT caption result')
+    return srt_text
 
 
 @dataclass
@@ -27,7 +105,9 @@ class DeepgramRecogn(BaseRecogn):
     @retry(retry=retry_if_not_exception_type(NO_RETRY_EXCEPT), stop=(stop_after_attempt(settings.get('retry_nums'))), wait=wait_fixed(2), before=before_log(logger, logging.INFO),  after=after_log(logger, logging.INFO))
     def _exec(self) -> Union[List[SrtItem], None]:
         if self._exit(): return
-        import zhconv    
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', message='pkg_resources is deprecated as an API.*', category=UserWarning)
+            import zhconv
         if os.path.getsize(self.audio_file) > 52428800:
             tools.runffmpeg(
                 ['-y', '-i', self.audio_file, '-ac', '1', '-ar', '16000', self.cache_folder + '/deepgram-tmp.mp3'])
@@ -45,10 +125,13 @@ class DeepgramRecogn(BaseRecogn):
         }
 
         diarize = self.max_speakers>-1
+        model_name = _deepgram_model_name(self.model_name)
+        language = _deepgram_language_code(self.detect_language)
+        _validate_deepgram_language(model_name, language)
         options = PrerecordedOptions(
-            model=self.model_name,
-            # detect_language=True,
-            language=self.detect_language[:2],
+            model=model_name,
+            detect_language=language is None,
+            language=language,
             smart_format=True,
             punctuate=True,
             paragraphs=True,
@@ -82,9 +165,7 @@ class DeepgramRecogn(BaseRecogn):
             if speaker_list:
                 Path(f'{self.cache_folder}/speaker.json').write_text(json.dumps(speaker_list), encoding='utf-8')
         else:
-            transcription = DeepgramConverter(res)
-            srt_str = srt(transcription,
-                          line_length=int(settings.get('cjk_len') if self.detect_language[:2] in ['zh', 'ja','ko'] else settings.get('other_len')))
+            srt_str = _deepgram_srt_from_response(res, self.detect_language)
             raws = tools.get_subtitle_from_srt(srt_str, is_file=False)
             if self.detect_language[:2] in contants.CJK_LANG:
                 for i, it in enumerate(raws):

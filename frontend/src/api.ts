@@ -52,6 +52,7 @@ export type JobRead = {
   params: JobParams
   error: string | null
   target_dir: string | null
+  progress_percent: number
   created_at: string
   updated_at: string
 }

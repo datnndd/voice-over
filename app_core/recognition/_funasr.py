@@ -10,6 +10,17 @@ from app_core.task.taskcfg import SrtItem
 from app_core.util import tools
 
 
+def _funasr_language_code(language: str | None) -> str:
+    if not language or language.lower() == 'auto':
+        return 'auto'
+    normalized = language.strip().lower().replace('_', '-')
+    if normalized in {'zh-hk', 'zh-mo', 'yue-hk', 'cantonese'}:
+        return 'yue'
+    if normalized in {'zh-cn', 'zh-hans', 'zh-tw', 'zh-hant', 'mandarin'}:
+        return 'zh'
+    return normalized.split('-')[0]
+
+
 @dataclass
 class FunasrRecogn(BaseRecogn):
 
@@ -17,14 +28,15 @@ class FunasrRecogn(BaseRecogn):
         if self._exit():
             return
         tools.check_and_down_ms(model_id='damo/punc_ct-transformer_zh-cn-common-vocab272727-pytorch',callback=self._process_callback)
+        detect_language = _funasr_language_code(self.detect_language)
 
-        if self.model_name == 'paraformer-zh' and self.detect_language[:2].lower() not in ['zh', 'en']:
-            self.model_name = 'FunAudioLLM/Fun-ASR-MLT-Nano-2512' if self.detect_language[:2] not in ['zh','en','ja','yu'] else 'FunAudioLLM/Fun-ASR-Nano-2512'
+        if self.model_name == 'paraformer-zh' and detect_language not in ['zh', 'en']:
+            self.model_name = 'FunAudioLLM/Fun-ASR-MLT-Nano-2512' if detect_language not in ['zh','en','ja','yue'] else 'FunAudioLLM/Fun-ASR-Nano-2512'
             tools.check_and_down_ms(model_id=self.model_name,callback=self._process_callback)
         elif self.model_name == 'SenseVoiceSmall':
             self.model_name = 'iic/SenseVoiceSmall'
         elif self.model_name == 'Fun-ASR-Nano-2512':
-            if self.detect_language[:2] not in ['zh', 'en', 'ja', 'yu']:
+            if detect_language not in ['zh', 'en', 'ja', 'yue']:
                 self.model_name = f'FunAudioLLM/Fun-ASR-MLT-Nano-2512'
             else:
                 self.model_name = f'FunAudioLLM/Fun-ASR-Nano-2512'
@@ -39,7 +51,7 @@ class FunasrRecogn(BaseRecogn):
         else:
             tools.check_and_down_ms(model_id=self.model_name,callback=self._process_callback)
         self.signal(text=f"load {self.model_name}")
-        logs_file = f'{config.TEMP_DIR}/{self.uuid}/funasr-{self.detect_language}-{time.time()}.log'
+        logs_file = f'{config.TEMP_DIR}/{self.uuid}/funasr-{detect_language}-{time.time()}.log'
         if self.model_name != 'paraformer-zh':
             cut_audio_list_file = f'{config.TEMP_DIR}/{self.uuid}/cut_audio_list_{time.time()}.json'
             Path(cut_audio_list_file).write_text( json.dumps( [ asdict(item) for item in self.cut_audio() ] ),encoding='utf-8')
@@ -47,7 +59,7 @@ class FunasrRecogn(BaseRecogn):
             cut_audio_list_file=None
         kwars = {
             "cut_audio_list":   cut_audio_list_file,
-            "detect_language": self.detect_language,
+            "detect_language": detect_language,
             "model_name": self.model_name,
             "logs_file": logs_file,
             "is_cuda": self.is_cuda,

@@ -4,20 +4,25 @@ import { api, type JobDetail, type JobParams, type OutputFile, type ProviderInfo
 
 type JobPreset = 'hosted' | 'local-qwen' | 'local-funasr'
 type WorkflowMode = 'single' | 'multi-speaker'
-type LanguageChoice = 'en' | 'ko' | 'ja' | 'zh' | 'vi' | 'other'
+type LanguageChoice = string
 
-const languageOptions: { value: LanguageChoice; label: string }[] = [
-  { value: 'en', label: 'Anh' },
-  { value: 'ko', label: 'H\u00e0n' },
-  { value: 'ja', label: 'Nh\u1eadt' },
-  { value: 'zh', label: 'Trung' },
-  { value: 'vi', label: 'Vi\u1ec7t' },
+type SelectOption = { value: string; label: string }
+
+const languageOptions: SelectOption[] = [
+  { value: 'en', label: 'English - en' },
+  { value: 'ko', label: 'Korean - ko' },
+  { value: 'ja', label: 'Japanese - ja' },
+  { value: 'zh', label: 'Chinese Mandarin Simplified - zh' },
+  { value: 'zh-TW', label: 'Chinese Mandarin Traditional - zh-TW' },
+  { value: 'zh-HK', label: 'Chinese Cantonese Traditional - zh-HK' },
+  { value: 'vi', label: 'Vietnamese - vi' },
   { value: 'other', label: 'Kh\u00e1c' },
 ]
 
-const sttModelOptions: Record<number, { value: string; label: string }[]> = {
+const sttModelOptions: Record<number, SelectOption[]> = {
   2: [
-    { value: 'flash', label: 'Qwen3-ASR Flash' },
+    { value: '1.7B', label: 'Qwen3-ASR 1.7B Local' },
+    { value: '0.6B', label: 'Qwen3-ASR 0.6B Local' },
   ],
   3: [
     { value: 'Fun-ASR-Nano-2512', label: 'Fun-ASR Nano 2512' },
@@ -25,11 +30,11 @@ const sttModelOptions: Record<number, { value: string; label: string }[]> = {
     { value: 'SenseVoiceSmall', label: 'SenseVoice Small' },
     { value: 'paraformer-zh', label: 'Paraformer zh' },
   ],
-  7: [],
+  7: [
+    { value: 'qwen3-asr-flash', label: 'Qwen3-ASR Flash API' },
+  ],
   10: [
     { value: 'nova-3', label: 'Deepgram Nova 3' },
-    { value: 'nova-2', label: 'Deepgram Nova 2' },
-    { value: 'whisper-large', label: 'Deepgram Whisper Large' },
   ],
 }
 
@@ -39,6 +44,157 @@ function getSttModelOptions(recognType: number) {
 
 function defaultSttModel(recognType: number) {
   return getSttModelOptions(recognType)[0]?.value ?? ''
+}
+
+const nova3Languages: SelectOption[] = [
+  { value: 'multi', label: 'Multilingual - multi' },
+  { value: 'ar', label: 'Arabic - ar' },
+  { value: 'be', label: 'Belarusian - be' },
+  { value: 'bn', label: 'Bengali - bn' },
+  { value: 'bs', label: 'Bosnian - bs' },
+  { value: 'bg', label: 'Bulgarian - bg' },
+  { value: 'ca', label: 'Catalan - ca' },
+  { value: 'zh-HK', label: 'Chinese Cantonese Traditional - zh-HK' },
+  { value: 'zh', label: 'Chinese Mandarin Simplified - zh' },
+  { value: 'zh-CN', label: 'Chinese Mandarin Simplified - zh-CN' },
+  { value: 'zh-Hans', label: 'Chinese Mandarin Simplified - zh-Hans' },
+  { value: 'zh-TW', label: 'Chinese Mandarin Traditional - zh-TW' },
+  { value: 'zh-Hant', label: 'Chinese Mandarin Traditional - zh-Hant' },
+  { value: 'hr', label: 'Croatian - hr' },
+  { value: 'cs', label: 'Czech - cs' },
+  { value: 'da', label: 'Danish - da' },
+  { value: 'nl', label: 'Dutch - nl' },
+  { value: 'en', label: 'English - en' },
+  { value: 'en-US', label: 'English US - en-US' },
+  { value: 'en-AU', label: 'English AU - en-AU' },
+  { value: 'en-GB', label: 'English GB - en-GB' },
+  { value: 'en-IN', label: 'English IN - en-IN' },
+  { value: 'en-NZ', label: 'English NZ - en-NZ' },
+  { value: 'et', label: 'Estonian - et' },
+  { value: 'fi', label: 'Finnish - fi' },
+  { value: 'nl-BE', label: 'Flemish - nl-BE' },
+  { value: 'fr', label: 'French - fr' },
+  { value: 'fr-CA', label: 'French Canada - fr-CA' },
+  { value: 'de', label: 'German - de' },
+  { value: 'de-CH', label: 'German Switzerland - de-CH' },
+  { value: 'el', label: 'Greek - el' },
+  { value: 'gu', label: 'Gujarati - gu' },
+  { value: 'he', label: 'Hebrew - he' },
+  { value: 'hi', label: 'Hindi - hi' },
+  { value: 'hu', label: 'Hungarian - hu' },
+  { value: 'id', label: 'Indonesian - id' },
+  { value: 'it', label: 'Italian - it' },
+  { value: 'ja', label: 'Japanese - ja' },
+  { value: 'kn', label: 'Kannada - kn' },
+  { value: 'ko', label: 'Korean - ko' },
+  { value: 'lv', label: 'Latvian - lv' },
+  { value: 'lt', label: 'Lithuanian - lt' },
+  { value: 'mk', label: 'Macedonian - mk' },
+  { value: 'ms', label: 'Malay - ms' },
+  { value: 'mr', label: 'Marathi - mr' },
+  { value: 'no', label: 'Norwegian - no' },
+  { value: 'fa', label: 'Persian - fa' },
+  { value: 'pl', label: 'Polish - pl' },
+  { value: 'pt', label: 'Portuguese - pt' },
+  { value: 'pt-BR', label: 'Portuguese Brazil - pt-BR' },
+  { value: 'pt-PT', label: 'Portuguese Portugal - pt-PT' },
+  { value: 'ro', label: 'Romanian - ro' },
+  { value: 'ru', label: 'Russian - ru' },
+  { value: 'sr', label: 'Serbian - sr' },
+  { value: 'sk', label: 'Slovak - sk' },
+  { value: 'sl', label: 'Slovenian - sl' },
+  { value: 'es', label: 'Spanish - es' },
+  { value: 'es-419', label: 'Spanish Latin America - es-419' },
+  { value: 'sv', label: 'Swedish - sv' },
+  { value: 'tl', label: 'Tagalog - tl' },
+  { value: 'ta', label: 'Tamil - ta' },
+  { value: 'te', label: 'Telugu - te' },
+  { value: 'th', label: 'Thai - th' },
+  { value: 'tr', label: 'Turkish - tr' },
+  { value: 'uk', label: 'Ukrainian - uk' },
+  { value: 'ur', label: 'Urdu - ur' },
+  { value: 'vi', label: 'Vietnamese - vi' },
+]
+
+
+const deepgramLanguageLabelByCode = new Map(nova3Languages.map((option) => [option.value, option.label]))
+
+function deepgramOption(value: string): SelectOption {
+  return { value, label: deepgramLanguageLabelByCode.get(value) ?? value }
+}
+
+function deepgramOptions(values: string[]): SelectOption[] {
+  return values.map(deepgramOption)
+}
+
+const deepgramNova3Languages = deepgramOptions([
+  'multi', 'ar', 'ar-AE', 'ar-SA', 'ar-QA', 'ar-KW', 'ar-SY', 'ar-LB', 'ar-PS', 'ar-JO', 'ar-EG', 'ar-SD', 'ar-TD', 'ar-MA', 'ar-DZ', 'ar-TN', 'ar-IQ', 'ar-IR',
+  'be', 'bn', 'bs', 'bg', 'ca', 'zh-HK', 'zh', 'zh-CN', 'zh-Hans', 'zh-TW', 'zh-Hant', 'hr', 'cs', 'da', 'da-DK', 'nl',
+  'en', 'en-US', 'en-AU', 'en-GB', 'en-IN', 'en-NZ', 'et', 'fi', 'nl-BE', 'fr', 'fr-CA', 'de', 'de-CH', 'el', 'gu', 'gu-IN',
+  'he', 'hi', 'hu', 'id', 'it', 'ja', 'kn', 'ko', 'ko-KR', 'lv', 'lt', 'mk', 'ms', 'mr', 'no', 'fa', 'pl', 'pt', 'pt-BR', 'pt-PT',
+  'ro', 'ru', 'sr', 'sk', 'sl', 'es', 'es-419', 'sv', 'sv-SE', 'tl', 'ta', 'te', 'th', 'th-TH', 'tr', 'uk', 'ur', 'vi',
+])
+
+const qwenAsrLanguages: SelectOption[] = [
+  { value: 'auto', label: 'Auto detect' },
+  { value: 'zh', label: 'Chinese Mandarin - zh' },
+  { value: 'yue', label: 'Chinese Cantonese - yue' },
+  { value: 'en', label: 'English - en' },
+  { value: 'ja', label: 'Japanese - ja' },
+  { value: 'ko', label: 'Korean - ko' },
+]
+const funAsrNanoLanguages: SelectOption[] = [
+  { value: 'zh', label: 'Chinese Mandarin - zh' },
+  { value: 'yue', label: 'Chinese Cantonese - yue' },
+  { value: 'en', label: 'English - en' },
+  { value: 'ja', label: 'Japanese - ja' },
+]
+const funAsrMltLanguages: SelectOption[] = [
+  { value: 'auto', label: 'Auto detect' },
+  ...nova3Languages.filter((option) => ['zh', 'yue', 'en', 'ja', 'ko', 'vi', 'th', 'id', 'ms', 'hi', 'ar', 'ru', 'fr', 'de', 'es', 'pt', 'it', 'tr'].includes(option.value)),
+]
+const senseVoiceLanguages: SelectOption[] = [
+  { value: 'auto', label: 'Auto detect' },
+  ...funAsrMltLanguages.filter((option) => option.value !== 'auto'),
+]
+const paraformerZhLanguages: SelectOption[] = [
+  { value: 'zh', label: 'Chinese Mandarin - zh' },
+]
+
+function getDeepgramLanguageOptions() {
+  return deepgramNova3Languages
+}
+
+function getFunAsrLanguageOptions(modelName: string): SelectOption[] {
+  if (modelName === 'paraformer-zh') return paraformerZhLanguages
+  if (modelName === 'Fun-ASR-Nano-2512') return funAsrNanoLanguages
+  if (modelName === 'SenseVoiceSmall') return senseVoiceLanguages
+  return funAsrMltLanguages
+}
+
+function getSourceLanguageOptions(recognType: number, modelName: string) {
+  if (recognType === 10) return getDeepgramLanguageOptions()
+  if (recognType === 7) return qwenAsrLanguages
+  if (recognType === 2) return qwenAsrLanguages
+  if (recognType === 3) return getFunAsrLanguageOptions(modelName)
+  return languageOptions
+}
+
+function defaultSourceLanguage(options: SelectOption[]) {
+  return options.find((option) => option.value === 'en')?.value ?? options.find((option) => option.value === 'auto')?.value ?? options[0]?.value ?? 'other'
+}
+
+function formWithValidSource(form: FormState, updates: Partial<FormState>): FormState {
+  const next = { ...form, ...updates }
+  const nextSourceOptions = getSourceLanguageOptions(next.recogn_type, next.model_name)
+  return {
+    ...next,
+    source_language_choice: isLanguageAllowed(next.source_language_choice, nextSourceOptions) ? next.source_language_choice : defaultSourceLanguage(nextSourceOptions),
+  }
+}
+
+function isLanguageAllowed(value: string, options: SelectOption[]) {
+  return options.some((option) => option.value === value)
 }
 
 type FormState = {
@@ -87,12 +243,12 @@ function getProviderStatus(provider: ProviderInfo, checks: RuntimeCheck[]) {
 
 function applyPreset(preset: JobPreset, current: FormState): FormState {
   if (preset === 'local-qwen') {
-    return { ...current, preset, recogn_type: 2, model_name: defaultSttModel(2) }
+    return formWithValidSource(current, { preset, recogn_type: 2, model_name: defaultSttModel(2) })
   }
   if (preset === 'local-funasr') {
-    return { ...current, preset, recogn_type: 3, model_name: defaultSttModel(3) }
+    return formWithValidSource(current, { preset, recogn_type: 3, model_name: defaultSttModel(3) })
   }
-  return { ...current, preset, recogn_type: 10, model_name: defaultSttModel(10), translate_type: 3, tts_type: 28 }
+  return formWithValidSource(current, { preset, recogn_type: 10, model_name: defaultSttModel(10), translate_type: 3, tts_type: 28 })
 }
 
 function resolveLanguageCode(choice: LanguageChoice, customCode: string) {
@@ -106,7 +262,9 @@ function formatBytes(value: number) {
 }
 
 function buildParams(form: FormState): JobParams {
-  const sourceLanguageCode = resolveLanguageCode(form.source_language_choice, form.source_custom_code)
+  const sourceOptions = getSourceLanguageOptions(form.recogn_type, form.model_name)
+  const safeSourceChoice = isLanguageAllowed(form.source_language_choice, sourceOptions) ? form.source_language_choice : defaultSourceLanguage(sourceOptions)
+  const sourceLanguageCode = resolveLanguageCode(safeSourceChoice, form.source_custom_code)
   const targetLanguageCode = resolveLanguageCode(form.target_language_choice, form.target_custom_code)
   const multiSpeaker = form.workflow_mode === 'multi-speaker'
   return {
@@ -138,12 +296,14 @@ function LanguageSelect({
   label,
   value,
   customValue,
+  options = languageOptions,
   onValueChange,
   onCustomChange,
 }: {
   label: string
   value: LanguageChoice
   customValue: string
+  options?: SelectOption[]
   onValueChange: (value: LanguageChoice) => void
   onCustomChange: (value: string) => void
 }) {
@@ -152,7 +312,7 @@ function LanguageSelect({
       <label>
         <span>{label}</span>
         <select value={value} onChange={(event) => onValueChange(event.target.value as LanguageChoice)}>
-          {languageOptions.map((option) => (
+          {options.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>
@@ -211,7 +371,7 @@ function SttModelSelect({
       <label className="field">
         <span>STT model</span>
         <select disabled value="">
-          <option value="">C? ??nh b?i c?u h?nh provider</option>
+          <option value="">{'C\u1ed1 \u0111\u1ecbnh b\u1edfi c\u1ea5u h\u00ecnh provider'}</option>
         </select>
       </label>
     )
@@ -300,6 +460,9 @@ function JobProgress({ job, outputs, onCancel }: { job: JobDetail | null; output
     )
   }
 
+  const progressPercent = Math.max(0, Math.min(100, job.progress_percent ?? (job.status === 'succeeded' ? 100 : 0)))
+  const progressLabel = job.status === 'queued' ? '\u0110ang ch\u1edd x\u1eed l\u00fd' : job.status === 'running' ? '\u0110ang x\u1eed l\u00fd' : job.status === 'succeeded' ? 'Ho\u00e0n t\u1ea5t' : job.status === 'failed' ? 'Th\u1ea5t b\u1ea1i' : '\u0110\u00e3 h\u1ee7y'
+
   return (
     <section className="panel job-panel">
       <div className="job-header">
@@ -310,6 +473,15 @@ function JobProgress({ job, outputs, onCancel }: { job: JobDetail | null; output
         <span className={`status ${job.status}`}>{job.status}</span>
       </div>
       {job.error && <div className="error-box">{job.error}</div>}
+      <div className="progress-card">
+        <div className="progress-summary">
+          <strong>{progressLabel}</strong>
+          <span>{progressPercent}%</span>
+        </div>
+        <div className="progress-track" aria-label={`Job progress ${progressPercent}%`}>
+          <div className="progress-fill" style={{ width: `${progressPercent}%` }} />
+        </div>
+      </div>
       <dl className="meta-grid">
         <div><dt>Input</dt><dd>{job.params.basename ?? job.params.name}</dd></div>
         <div><dt>Output dir</dt><dd>{job.target_dir}</dd></div>
@@ -361,6 +533,7 @@ function App() {
   const selectedSttReady = checksByKey.get(readinessKey('stt', form.recogn_type))?.status !== 'missing'
   const selectedTtsReady = checksByKey.get(readinessKey('tts', form.tts_type))?.status !== 'missing'
   const selectedTranslatorReady = checksByKey.get(readinessKey('translator', form.translate_type))?.status !== 'missing'
+  const sourceOptions = getSourceLanguageOptions(form.recogn_type, form.model_name)
   const sourceLanguageCode = resolveLanguageCode(form.source_language_choice, form.source_custom_code)
   const targetLanguageCode = resolveLanguageCode(form.target_language_choice, form.target_custom_code)
   const languagesReady = Boolean(sourceLanguageCode && targetLanguageCode)
@@ -426,7 +599,11 @@ function App() {
     setLoading(true)
     setError(null)
     try {
-      const created = await api.createJob({ type: 'video_translate', params: buildParams(form) })
+      const safeForm = formWithValidSource(form, {})
+      if (safeForm.source_language_choice !== form.source_language_choice) {
+        setForm(safeForm)
+      }
+      const created = await api.createJob({ type: 'video_translate', params: buildParams(safeForm) })
       const detail = await api.getJob(created.id)
       setJob(detail)
       setOutputs([])
@@ -491,10 +668,10 @@ function App() {
           </div>
           <div className="preset-row">
             <button type="button" className={form.workflow_mode === 'single' ? 'preset active' : 'preset'} onClick={() => setForm({ ...form, workflow_mode: 'single' })}>
-              1 gi?ng ??c
+              {'1 gi\u1ecdng \u0111\u1ecdc'}
             </button>
             <button type="button" className={form.workflow_mode === 'multi-speaker' ? 'preset active' : 'preset'} onClick={() => setForm({ ...form, workflow_mode: 'multi-speaker', tts_type: 2, voice_role: 'clone' })}>
-              Nhi?u ng??i n?i ? auto clone
+              {'Nhi\u1ec1u ng\u01b0\u1eddi n\u00f3i \u00b7 auto clone'}
             </button>
           </div>
           <div className="preset-row">
@@ -518,6 +695,7 @@ function App() {
               label="Source"
               value={form.source_language_choice}
               customValue={form.source_custom_code}
+              options={sourceOptions}
               onValueChange={(source_language_choice) => setForm({ ...form, source_language_choice })}
               onCustomChange={(source_custom_code) => setForm({ ...form, source_custom_code })}
             />
@@ -528,20 +706,25 @@ function App() {
               onValueChange={(target_language_choice) => setForm({ ...form, target_language_choice })}
               onCustomChange={(target_custom_code) => setForm({ ...form, target_custom_code })}
             />
-            <ProviderSelect label="STT" value={form.recogn_type} providers={providers?.stt ?? []} checks={checks} onChange={(recogn_type) => setForm({ ...form, recogn_type, model_name: defaultSttModel(recogn_type) })} />
-            <SttModelSelect recognType={form.recogn_type} value={form.model_name} onChange={(model_name) => setForm({ ...form, model_name })} />
+            <ProviderSelect label="STT" value={form.recogn_type} providers={providers?.stt ?? []} checks={checks} onChange={(recogn_type) => {
+                const model_name = defaultSttModel(recogn_type)
+                setForm(formWithValidSource(form, { recogn_type, model_name }))
+              }} />
+            <SttModelSelect recognType={form.recogn_type} value={form.model_name} onChange={(model_name) => {
+                setForm(formWithValidSource(form, { model_name }))
+              }} />
             <ProviderSelect label="Translator" value={form.translate_type} providers={providers?.translators ?? []} checks={checks} onChange={(translate_type) => setForm({ ...form, translate_type })} />
             <ProviderSelect label="TTS" value={form.tts_type} providers={providers?.tts ?? []} checks={checks} onChange={(tts_type) => setForm({ ...form, tts_type, voice_role: form.workflow_mode === 'multi-speaker' ? 'clone' : form.voice_role })} />
             {form.workflow_mode === 'multi-speaker' && (
               <div className="clone-box">
                 <div>
-                  <strong>{'T? t?ch ng??i n?i v? clone gi?ng'}</strong>
-                  <small>{'Backend s? diarize, gom 10?15s audio cho t?ng spk, r?i d?ng OmniVoice clone theo t?ng d?ng ph? ??.'}</small>
+                  <strong>{'T\u1ef1 t\u00e1ch ng\u01b0\u1eddi n\u00f3i v\u00e0 clone gi\u1ecdng'}</strong>
+                  <small>{'Backend s\u1ebd diarize, gom 10\u201315s audio cho t\u1eebng spk, r\u1ed3i d\u00f9ng OmniVoice clone theo t\u1eebng d\u00f2ng ph\u1ee5 \u0111\u1ec1.'}</small>
                 </div>
                 <label className="field">
-                  <span>S? ng??i n?i</span>
+                  <span>{'S\u1ed1 ng\u01b0\u1eddi n\u00f3i'}</span>
                   <select value={form.nums_diariz} onChange={(event) => setForm({ ...form, nums_diariz: Number(event.target.value) })}>
-                    <option value={0}>T? ??ng</option>
+                    <option value={0}>{'T\u1ef1 \u0111\u1ed9ng'}</option>
                     {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((value) => <option key={value} value={value}>{value}</option>)}
                   </select>
                 </label>
@@ -577,7 +760,7 @@ function App() {
                   <input value={cloneRefText} placeholder={'C\u00e2u n\u00f3i trong audio m\u1eabu'} onChange={(event) => setCloneRefText(event.target.value)} />
                 </label>
                 <button className="secondary" type="button" disabled={!cloneFile || !cloneRefText.trim() || uploadingClone} onClick={uploadCloneReference}>
-                  {uploadingClone ? '?ang upload...' : 'Upload clone voice'}
+                  {uploadingClone ? '\u0110ang upload...' : 'Upload clone voice'}
                 </button>
               </div>
             )}

@@ -1,5 +1,9 @@
 import importlib
 import inspect
+import warnings
+
+warnings.filterwarnings('ignore', message="'audioop' is deprecated.*", category=DeprecationWarning)
+warnings.filterwarnings('ignore', message='pkg_resources is deprecated as an API.*', category=UserWarning)
 from dataclasses import dataclass
 from typing import Optional
 from app_core.configure.config import logger

@@ -338,6 +338,44 @@ select:focus {
   padding: 12px;
 }
 
+
+.progress-card {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 16px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: #0f1623;
+  padding: 14px;
+}
+
+.progress-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.progress-summary span {
+  color: var(--accent-2);
+  font-size: 28px;
+  font-weight: 900;
+}
+
+.progress-track {
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.22);
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  transition: width 240ms ease;
+}
+
 dt {
   color: var(--muted);
   font-size: 12px;

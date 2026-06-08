@@ -116,14 +116,6 @@ FUNASR_MODEL = ['Fun-ASR-Nano-2512', 'Fun-ASR-MLT-Nano-2512', 'paraformer-zh', '
 # deepgram 支持的语音识别模型
 DEEPGRAM_MODEL = [
     "nova-3",
-    "whisper-large",
-    "whisper-medium",
-    "whisper-small",
-    "whisper-base",
-    "whisper-tiny",
-    "nova-2",
-    "enhanced",
-    "base",
 ]
 
 # 支持的视频格式

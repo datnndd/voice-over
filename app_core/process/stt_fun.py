@@ -562,6 +562,20 @@ def qwen3asr_fun(
         return False, f'{e}:{msg}'
 
 
+
+
+def _funasr_language_code(language):
+    if not language or str(language).lower() == 'auto':
+        return None
+    normalized = str(language).strip().lower().replace('_', '-')
+    if normalized in {'zh-hk', 'zh-mo', 'yue-hk', 'cantonese'}:
+        return 'yue'
+    if normalized in {'zh-cn', 'zh-hans', 'zh-tw', 'zh-hant', 'mandarin'}:
+        return 'zh'
+    if normalized == 'yue':
+        return 'yue'
+    return normalized.split('-')[0]
+
 def funasr_mlt(
         cut_audio_list=None,
         detect_language=None,
@@ -626,7 +640,7 @@ def funasr_mlt(
 
             res = model.generate(
                 input=[it['filename'] for it in srts],
-                language=detect_language[:2],  # "zh", "en", "yue", "ja", "ko", "nospeech"
+                language=_funasr_language_code(detect_language),  # "zh", "en", "yue", "ja", "ko", "nospeech"
                 use_itn=True,
                 batch_size=1,
                 progress_callback=_show_process,

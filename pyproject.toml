@@ -12,6 +12,7 @@ dependencies = [
     "python-dotenv>=1.0",
     "python-multipart>=0.0.20",
     "requests>=2.32",
+    "setuptools<81",
     "srt>=3.5",
     "tenacity>=8.0",
 ]

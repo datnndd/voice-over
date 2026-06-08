@@ -11,6 +11,17 @@ from app_core.configure.config import params, settings, logger
 from app_core.recognition._base import BaseRecogn
 from app_core.task.taskcfg import SrtItem
 
+
+def _qwen_asr_language_code(language: str | None) -> str | None:
+    if not language or language.lower() == 'auto':
+        return None
+    normalized = language.strip().lower().replace('_', '-')
+    if normalized in {'zh-hk', 'zh-mo', 'yue-hk', 'cantonese'}:
+        return 'yue'
+    if normalized in {'zh-cn', 'zh-hans', 'zh-tw', 'zh-hant', 'mandarin'}:
+        return 'zh'
+    return normalized.split('-')[0]
+
 @dataclass
 class Qwen3ASRRecogn(BaseRecogn):
     def __post_init__(self):

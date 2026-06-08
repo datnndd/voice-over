@@ -2,6 +2,75 @@
 
 Backend-first voice-over API with owned `app_core` runtime.
 
+
+## Quick Start
+
+Use Python 3.11 venv for local AI providers. Python 3.14 can fail on some AI wheels.
+
+```powershell
+uv venv --python 3.11 .venv
+uv pip install --python .venv\Scripts\python.exe -e ".[dev,providers,local-ai]"
+```
+
+Copy env file and fill provider values you use:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Run backend in terminal 1:
+
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+```
+
+Run frontend in terminal 2:
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+Open frontend:
+
+```text
+http://127.0.0.1:5173
+```
+
+If frontend shows `Failed to fetch`, backend is probably not running on `http://127.0.0.1:8000`.
+
+Override frontend API URL if needed:
+
+```powershell
+$env:VITE_API_BASE_URL="http://127.0.0.1:8000"
+cd frontend
+npm run dev
+```
+
+## Common Commands
+
+Backend validation:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\validate_phase1.py
+```
+
+Frontend validation:
+
+```powershell
+cd frontend
+npm run lint
+npm run build
+```
+
+Real video smoke test:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\smoke_real_video.py
+.\.venv\Scripts\python.exe scripts\smoke_real_video.py --run
+```
+
 ## Phase 1 backend
 
 Install dev dependencies:

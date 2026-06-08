@@ -64,6 +64,7 @@ class JobRead(ApiModel):
     params: JobParams
     error: str | None = None
     target_dir: str | None = None
+    progress_percent: int = 0
     created_at: str
     updated_at: str
 

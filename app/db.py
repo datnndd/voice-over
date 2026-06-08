@@ -16,6 +16,7 @@ create table if not exists jobs (
     params_json text not null,
     error text,
     target_dir text,
+    progress_percent integer not null default 0,
     created_at text not null default (datetime('now')),
     updated_at text not null default (datetime('now'))
 );
@@ -45,6 +46,9 @@ class JobRepository:
     def _init_schema(self) -> None:
         with self._connect() as conn:
             conn.executescript(SCHEMA)
+            columns = {row[1] for row in conn.execute("pragma table_info(jobs)").fetchall()}
+            if "progress_percent" not in columns:
+                conn.execute("alter table jobs add column progress_percent integer not null default 0")
 
     def create_job(self, job_id: str, job_type: JobType, params: dict[str, Any], target_dir: str) -> dict[str, Any]:
         with self._connect() as conn:
@@ -71,15 +75,33 @@ class JobRepository:
         *,
         error: str | None = None,
         target_dir: str | None = None,
+        progress_percent: int | None = None,
     ) -> dict[str, Any]:
         with self._connect() as conn:
             conn.execute(
                 """
                 update jobs
-                set status = ?, error = coalesce(?, error), target_dir = coalesce(?, target_dir), updated_at = datetime('now')
+                set status = ?,
+                    error = coalesce(?, error),
+                    target_dir = coalesce(?, target_dir),
+                    progress_percent = coalesce(?, progress_percent),
+                    updated_at = datetime('now')
                 where id = ?
                 """,
-                (status.value, error, target_dir, job_id),
+                (status.value, error, target_dir, progress_percent, job_id),
+            )
+        return self.get_job(job_id)
+
+    def update_progress(self, job_id: str, progress_percent: int) -> dict[str, Any]:
+        progress = max(0, min(100, int(progress_percent)))
+        with self._connect() as conn:
+            conn.execute(
+                """
+                update jobs
+                set progress_percent = max(progress_percent, ?), updated_at = datetime('now')
+                where id = ?
+                """,
+                (progress, job_id),
             )
         return self.get_job(job_id)
 
