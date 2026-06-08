@@ -1,0 +1,191 @@
+- main [ref=e3]:
+  - complementary "Dashboard navigation" [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: VO
+      - generic [ref=e7]:
+        - strong [ref=e8]: Voice-over
+        - generic [ref=e9]: Studio dashboard
+    - navigation [ref=e10]:
+      - link "Tổng quan" [ref=e11] [cursor=pointer]:
+        - /url: "#overview"
+      - link "Tạo job" [ref=e12] [cursor=pointer]:
+        - /url: "#create-job"
+      - link "Provider" [ref=e13] [cursor=pointer]:
+        - /url: "#providers"
+      - link "Tiến trình" [ref=e14] [cursor=pointer]:
+        - /url: "#progress"
+    - generic [ref=e15]:
+      - generic [ref=e16]: API
+      - strong [ref=e17]: http://127.0.0.1:8000
+  - generic [ref=e18]:
+    - generic [ref=e19]:
+      - generic [ref=e20]:
+        - text: Voice-over studio
+        - heading "Dịch video, tạo phụ đề, lồng tiếng." [level=1] [ref=e21]
+        - paragraph [ref=e22]: "Luồng rõ: input → ngôn ngữ → provider → giọng đọc → job/output."
+      - button "Refresh readiness" [ref=e23] [cursor=pointer]
+    - region "Dashboard summary" [ref=e24]:
+      - generic [ref=e25]:
+        - generic [ref=e26]: Providers ready
+        - strong [ref=e27]: 0/0
+      - generic [ref=e28]:
+        - generic [ref=e29]: Workflow
+        - strong [ref=e30]: Single voice
+      - generic [ref=e31]:
+        - generic [ref=e32]: Job status
+        - strong [ref=e33]: idle
+    - generic [ref=e34]:
+      - generic [ref=e35]:
+        - generic [ref=e37]:
+          - paragraph [ref=e38]: Tạo video_translate job
+          - text: Không auth · local single-user
+        - generic [ref=e39]:
+          - generic [ref=e40]:
+            - generic [ref=e41]: "01"
+            - generic [ref=e42]:
+              - strong [ref=e43]: Chọn chế độ
+              - generic [ref=e44]: Một giọng đọc hoặc tự clone theo speaker.
+          - generic [ref=e45]:
+            - button "1 giọng đọc" [ref=e46] [cursor=pointer]
+            - button "Nhiều người nói · auto clone" [ref=e47] [cursor=pointer]
+          - generic [ref=e48]:
+            - button "Deepgram + OpenAI + Azure" [ref=e49] [cursor=pointer]
+            - button "Qwen local STT" [ref=e50] [cursor=pointer]
+            - button "FunASR local STT" [ref=e51] [cursor=pointer]
+        - generic [ref=e52]:
+          - generic [ref=e53]:
+            - generic [ref=e54]: "02"
+            - generic [ref=e55]:
+              - strong [ref=e56]: Input và ngôn ngữ
+              - generic [ref=e57]: Path file local, source language, target language.
+          - generic [ref=e58]:
+            - generic [ref=e59]: Video path
+            - textbox "Video path" [ref=e60]: C:/Users/ddat2/Downloads/voice-over/test.mp4
+          - generic [ref=e61]:
+            - generic [ref=e63]:
+              - generic [ref=e64]: Source
+              - combobox "Source" [ref=e65]:
+                - option "Arabic - ar"
+                - option "Belarusian - be"
+                - option "Bengali - bn"
+                - option "Bosnian - bs"
+                - option "Bulgarian - bg"
+                - option "Catalan - ca"
+                - option "Chinese Mandarin Simplified - zh"
+                - option "Croatian - hr"
+                - option "Czech - cs"
+                - option "Danish - da"
+                - option "Dutch - nl"
+                - option "English - en" [selected]
+                - option "Estonian - et"
+                - option "Finnish - fi"
+                - option "French - fr"
+                - option "German - de"
+                - option "Greek - el"
+                - option "Gujarati - gu"
+                - option "Hebrew - he"
+                - option "Hindi - hi"
+                - option "Hungarian - hu"
+                - option "Indonesian - id"
+                - option "Italian - it"
+                - option "Japanese - ja"
+                - option "Kannada - kn"
+                - option "Korean - ko"
+                - option "Latvian - lv"
+                - option "Lithuanian - lt"
+                - option "Macedonian - mk"
+                - option "Malay - ms"
+                - option "Marathi - mr"
+                - option "Norwegian - no"
+                - option "Persian - fa"
+                - option "Polish - pl"
+                - option "Portuguese - pt"
+                - option "Romanian - ro"
+                - option "Russian - ru"
+                - option "Serbian - sr"
+                - option "Slovak - sk"
+                - option "Slovenian - sl"
+                - option "Spanish - es"
+                - option "Swedish - sv"
+                - option "Tagalog - tl"
+                - option "Tamil - ta"
+                - option "Telugu - te"
+                - option "Thai - th"
+                - option "Turkish - tr"
+                - option "Ukrainian - uk"
+                - option "Urdu - ur"
+                - option "Vietnamese - vi"
+            - generic [ref=e67]:
+              - generic [ref=e68]: Target
+              - combobox "Target" [ref=e69]:
+                - option "English - en"
+                - option "Korean - ko"
+                - option "Japanese - ja"
+                - option "Chinese Mandarin Simplified - zh"
+                - option "Chinese Mandarin Traditional - zh-TW"
+                - option "Chinese Cantonese Traditional - zh-HK"
+                - option "Vietnamese - vi" [selected]
+                - option "Khác"
+        - generic [ref=e70]:
+          - generic [ref=e71]:
+            - generic [ref=e72]: "03"
+            - generic [ref=e73]:
+              - strong [ref=e74]: Provider pipeline
+              - generic [ref=e75]: STT → translate → TTS.
+          - generic [ref=e76]:
+            - generic [ref=e77]:
+              - generic [ref=e78]: STT
+              - combobox "STT" [ref=e79]
+            - generic [ref=e80]:
+              - generic [ref=e81]: STT model
+              - combobox "STT model" [disabled] [ref=e82]:
+                - option "Deepgram Nova 3" [selected]
+            - generic [ref=e83]:
+              - generic [ref=e84]: Translator
+              - combobox "Translator" [ref=e85]
+            - generic [ref=e86]:
+              - generic [ref=e87]: TTS
+              - combobox "TTS" [ref=e88]
+        - generic [ref=e89]:
+          - generic [ref=e90]:
+            - generic [ref=e91]: "04"
+            - generic [ref=e92]:
+              - strong [ref=e93]: Giọng đọc và xử lý audio
+              - generic [ref=e94]: Clone voice, speaker split, vocal/background handling.
+          - generic [ref=e95]:
+            - generic [ref=e96]:
+              - strong [ref=e97]: Lọc giọng nói / tách vocal
+              - generic [ref=e98]: Tách vocal + background trước STT; nếu bật ghép BGM, backend nhúng lại nền sau khi lồng tiếng.
+            - generic [ref=e99]:
+              - checkbox "Bật tách vocal trước STT" [ref=e100]
+              - generic [ref=e101]: Bật tách vocal trước STT
+            - generic [ref=e102]:
+              - generic [ref=e103]: Model tách âm
+              - combobox "Model tách âm" [disabled] [ref=e104]:
+                - option "Spleeter (nhẹ, mặc định)" [selected]
+                - option "UVR-MDX-NET Inst HQ 4"
+                - option "UVR-MDX-NET Inst HQ 1"
+                - option "UVR-MDX-NET Inst HQ 2"
+                - option "UVR-MDX-NET Inst HQ 3"
+                - option "UVR-MDX-NET Inst HQ 5"
+                - option "UVR-MDX-NET Inst Main"
+                - option "UVR-MDX-NET Inst 1"
+                - option "UVR-MDX-NET Inst 2"
+                - option "UVR-MDX-NET Inst 3"
+            - generic [ref=e105]:
+              - checkbox "Ghép lại nhạc nền đã tách" [checked] [disabled] [ref=e106]
+              - generic [ref=e107]: Ghép lại nhạc nền đã tách
+          - generic [ref=e108]:
+            - generic [ref=e109]: Voice role
+            - combobox "Voice role" [ref=e110]:
+              - option "No"
+              - option "HoaiMy(Female) ? female" [selected]
+              - option "NamMinh(Male) ? male"
+        - button "Tạo job" [ref=e112] [cursor=pointer]
+      - generic [ref=e113]:
+        - generic [ref=e116]:
+          - paragraph [ref=e117]: Provider readiness
+          - generic [ref=e118]: http://127.0.0.1:8000
+        - generic [ref=e120]:
+          - paragraph [ref=e121]: Chưa có job.
+          - generic [ref=e122]: Tạo job để xem tiến trình, log, và output.

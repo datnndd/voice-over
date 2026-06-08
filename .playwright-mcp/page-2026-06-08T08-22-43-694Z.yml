@@ -1,0 +1,111 @@
+- main [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - text: Voice-over studio
+      - heading "Dịch video, tạo phụ đề, lồng tiếng." [level=1] [ref=e6]
+      - paragraph [ref=e7]: Backend-first app cho một người dùng. Chọn provider, chạy job, xem output trong cùng màn hình.
+    - button "Refresh readiness" [ref=e8] [cursor=pointer]
+  - generic [ref=e10]:
+    - paragraph [ref=e11]: Provider readiness
+    - generic [ref=e12]: http://127.0.0.1:8000
+  - generic [ref=e13]:
+    - generic [ref=e14]:
+      - generic [ref=e15]:
+        - paragraph [ref=e16]: Tạo video_translate job
+        - generic [ref=e17]: Không auth · local single-user
+      - generic [ref=e18]:
+        - button "1 giọng đọc" [ref=e19] [cursor=pointer]
+        - button "Nhiều người nói · auto clone" [ref=e20] [cursor=pointer]
+      - generic [ref=e21]:
+        - button "Deepgram + OpenAI + Azure" [ref=e22] [cursor=pointer]
+        - button "Qwen local STT" [ref=e23] [cursor=pointer]
+        - button "FunASR local STT" [ref=e24] [cursor=pointer]
+      - generic [ref=e25]:
+        - generic [ref=e26]: Video path
+        - textbox "Video path" [ref=e27]: C:/Users/ddat2/Downloads/voice-over/test.mp4
+      - generic [ref=e28]:
+        - generic [ref=e30]:
+          - generic [ref=e31]: Source
+          - combobox "Source" [ref=e32]:
+            - option "Arabic - ar"
+            - option "Belarusian - be"
+            - option "Bengali - bn"
+            - option "Bosnian - bs"
+            - option "Bulgarian - bg"
+            - option "Catalan - ca"
+            - option "Chinese Mandarin Simplified - zh"
+            - option "Croatian - hr"
+            - option "Czech - cs"
+            - option "Danish - da"
+            - option "Dutch - nl"
+            - option "English - en" [selected]
+            - option "Estonian - et"
+            - option "Finnish - fi"
+            - option "French - fr"
+            - option "German - de"
+            - option "Greek - el"
+            - option "Gujarati - gu"
+            - option "Hebrew - he"
+            - option "Hindi - hi"
+            - option "Hungarian - hu"
+            - option "Indonesian - id"
+            - option "Italian - it"
+            - option "Japanese - ja"
+            - option "Kannada - kn"
+            - option "Korean - ko"
+            - option "Latvian - lv"
+            - option "Lithuanian - lt"
+            - option "Macedonian - mk"
+            - option "Malay - ms"
+            - option "Marathi - mr"
+            - option "Norwegian - no"
+            - option "Persian - fa"
+            - option "Polish - pl"
+            - option "Portuguese - pt"
+            - option "Romanian - ro"
+            - option "Russian - ru"
+            - option "Serbian - sr"
+            - option "Slovak - sk"
+            - option "Slovenian - sl"
+            - option "Spanish - es"
+            - option "Swedish - sv"
+            - option "Tagalog - tl"
+            - option "Tamil - ta"
+            - option "Telugu - te"
+            - option "Thai - th"
+            - option "Turkish - tr"
+            - option "Ukrainian - uk"
+            - option "Urdu - ur"
+            - option "Vietnamese - vi"
+        - generic [ref=e34]:
+          - generic [ref=e35]: Target
+          - combobox "Target" [ref=e36]:
+            - option "English - en"
+            - option "Korean - ko"
+            - option "Japanese - ja"
+            - option "Chinese Mandarin Simplified - zh"
+            - option "Chinese Mandarin Traditional - zh-TW"
+            - option "Chinese Cantonese Traditional - zh-HK"
+            - option "Vietnamese - vi" [selected]
+            - option "Khác"
+        - generic [ref=e37]:
+          - generic [ref=e38]: STT
+          - combobox "STT" [ref=e39]
+        - generic [ref=e40]:
+          - generic [ref=e41]: STT model
+          - combobox "STT model" [disabled] [ref=e42]:
+            - option "Deepgram Nova 3" [selected]
+        - generic [ref=e43]:
+          - generic [ref=e44]: Translator
+          - combobox "Translator" [ref=e45]
+        - generic [ref=e46]:
+          - generic [ref=e47]: TTS
+          - combobox "TTS" [ref=e48]
+        - generic [ref=e49]:
+          - generic [ref=e50]: Voice role
+          - combobox "Voice role" [ref=e51]:
+            - option "HoaiMy(Female)" [selected]
+      - button "Tạo job" [ref=e52] [cursor=pointer]
+    - generic [ref=e53]:
+      - paragraph [ref=e54]: Chưa có job.
+      - generic [ref=e55]: Tạo job để xem tiến trình, log, và output.

@@ -22,6 +22,9 @@ export type JobParams = {
   subtitle_type?: number
   output_srt?: number
   recogn2pass?: boolean
+  is_separate?: boolean
+  embed_bgm?: boolean
+  uvr_models?: string
   uuid?: string
   target_dir?: string
   dirname?: string

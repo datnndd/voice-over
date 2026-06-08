@@ -66,3 +66,11 @@ def test_deepgram_response_summary_counts_transcripts_and_utterances():
     )
 
     assert summary == {"channels": 2, "utterances": 1, "non_empty_transcripts": 2}
+
+
+def test_deepgram_language_code_matches_videotrans_two_letter_behavior():
+    assert _deepgram._deepgram_language_code("zh") == "zh"
+    assert _deepgram._deepgram_language_code("zh-HK") == "zh"
+    assert _deepgram._deepgram_language_code("zh_TW") == "zh"
+    assert _deepgram._deepgram_language_code("en-US") == "en"
+    assert _deepgram._deepgram_language_code("auto") is None

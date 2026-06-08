@@ -23,12 +23,11 @@ from app_core.configure import contants
 
 
 _DEEPGRAM_NOVA3_GENERAL_LANGUAGES = {
-    'multi', 'ar', 'ar-AE', 'ar-SA', 'ar-QA', 'ar-KW', 'ar-SY', 'ar-LB', 'ar-PS', 'ar-JO', 'ar-EG', 'ar-SD', 'ar-TD', 'ar-MA', 'ar-DZ', 'ar-TN', 'ar-IQ', 'ar-IR',
-    'be', 'bn', 'bs', 'bg', 'ca', 'zh-HK', 'zh', 'zh-CN', 'zh-Hans', 'zh-TW', 'zh-Hant', 'hr', 'cs', 'da', 'da-DK', 'nl',
-    'en', 'en-US', 'en-AU', 'en-GB', 'en-IN', 'en-NZ', 'et', 'fi', 'nl-BE', 'fr', 'fr-CA', 'de', 'de-CH', 'el', 'gu', 'gu-IN',
-    'he', 'hi', 'hu', 'id', 'it', 'ja', 'kn', 'ko', 'ko-KR', 'lv', 'lt', 'mk', 'ms', 'mr', 'no', 'fa', 'pl', 'pt', 'pt-BR', 'pt-PT',
-    'ro', 'ru', 'sr', 'sk', 'sl', 'es', 'es-419', 'sv', 'sv-SE', 'tl', 'ta', 'te', 'th', 'th-TH', 'tr', 'uk', 'ur', 'vi',
+    'ar', 'be', 'bn', 'bs', 'bg', 'ca', 'zh', 'hr', 'cs', 'da', 'nl', 'en', 'et', 'fi', 'fr', 'de', 'el', 'gu',
+    'he', 'hi', 'hu', 'id', 'it', 'ja', 'kn', 'ko', 'lv', 'lt', 'mk', 'ms', 'mr', 'no', 'fa', 'pl', 'pt',
+    'ro', 'ru', 'sr', 'sk', 'sl', 'es', 'sv', 'tl', 'ta', 'te', 'th', 'tr', 'uk', 'ur', 'vi',
 }
+
 _DEEPGRAM_NOVA3_MODELS = {'nova-3', 'nova-3-general'}
 _DEEPGRAM_LEGACY_MODELS = {
     'nova-3-medical', 'nova-2', 'nova-2-general', 'enhanced', 'enhanced-general', 'base', 'base-general',
@@ -60,28 +59,10 @@ def _validate_deepgram_language(model_name: str | None, language: str | None) ->
 def _deepgram_language_code(language: str | None) -> str | None:
     if not language:
         return language
-    raw = language.strip()
-    normalized = raw.lower().replace('_', '-')
-    if normalized == 'auto':
+    normalized = language.strip().replace('_', '-')
+    if normalized.lower() == 'auto':
         return None
-    chinese_aliases = {
-        'zh-cn': 'zh-CN',
-        'zh-hans': 'zh-Hans',
-        'zh-sg': 'zh-CN',
-        'zh-tw': 'zh-TW',
-        'zh-hant': 'zh-Hant',
-        'zh-hk': 'zh-HK',
-        'zh-mo': 'zh-HK',
-        'yue': 'zh-HK',
-        'yue-hk': 'zh-HK',
-        'cantonese': 'zh-HK',
-        'mandarin': 'zh',
-    }
-    if normalized in chinese_aliases:
-        return chinese_aliases[normalized]
-    if normalized.startswith('zh-'):
-        return chinese_aliases.get(normalized, raw)
-    return raw
+    return normalized[:2].lower()
 
 
 def _deepgram_caption_line_length(language: str | None) -> int:

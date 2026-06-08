@@ -166,6 +166,7 @@ class TaskCfgVTT(TaskCfgSTT, TaskCfgTTS, TaskCfgSTS):
     novoice_mp4: Union[os.PathLike,str]=None  # 从原始视频分离出的无声视频
     is_separate: bool = False  # 是否进行人声、背景音分离
     embed_bgm: bool = True  # 是否需要重新嵌入背景音
+    uvr_models: str = "spleeter"  # 分离背景声模型
     instrument: Union[os.PathLike,str]=None  # 分离出的背景音频
     vocal: Union[os.PathLike,str]=None  # 分离出的人声音频
     clear_cache: bool = False  # 是否清理已存在的文件

@@ -38,6 +38,19 @@ const sttModelOptions: Record<number, SelectOption[]> = {
   ],
 }
 
+const uvrModelOptions: SelectOption[] = [
+  { value: 'spleeter', label: 'Spleeter (nhẹ, mặc định)' },
+  { value: 'UVR-MDX-NET-Inst_HQ_4', label: 'UVR-MDX-NET Inst HQ 4' },
+  { value: 'UVR-MDX-NET-Inst_HQ_1', label: 'UVR-MDX-NET Inst HQ 1' },
+  { value: 'UVR-MDX-NET-Inst_HQ_2', label: 'UVR-MDX-NET Inst HQ 2' },
+  { value: 'UVR-MDX-NET-Inst_HQ_3', label: 'UVR-MDX-NET Inst HQ 3' },
+  { value: 'UVR-MDX-NET-Inst_HQ_5', label: 'UVR-MDX-NET Inst HQ 5' },
+  { value: 'UVR-MDX-NET-Inst_Main', label: 'UVR-MDX-NET Inst Main' },
+  { value: 'UVR-MDX-NET-Inst_1', label: 'UVR-MDX-NET Inst 1' },
+  { value: 'UVR-MDX-NET-Inst_2', label: 'UVR-MDX-NET Inst 2' },
+  { value: 'UVR-MDX-NET-Inst_3', label: 'UVR-MDX-NET Inst 3' },
+]
+
 function getSttModelOptions(recognType: number) {
   return sttModelOptions[recognType] ?? []
 }
@@ -128,11 +141,9 @@ function deepgramOptions(values: string[]): SelectOption[] {
 }
 
 const deepgramNova3Languages = deepgramOptions([
-  'multi', 'ar', 'ar-AE', 'ar-SA', 'ar-QA', 'ar-KW', 'ar-SY', 'ar-LB', 'ar-PS', 'ar-JO', 'ar-EG', 'ar-SD', 'ar-TD', 'ar-MA', 'ar-DZ', 'ar-TN', 'ar-IQ', 'ar-IR',
-  'be', 'bn', 'bs', 'bg', 'ca', 'zh-HK', 'zh', 'zh-CN', 'zh-Hans', 'zh-TW', 'zh-Hant', 'hr', 'cs', 'da', 'da-DK', 'nl',
-  'en', 'en-US', 'en-AU', 'en-GB', 'en-IN', 'en-NZ', 'et', 'fi', 'nl-BE', 'fr', 'fr-CA', 'de', 'de-CH', 'el', 'gu', 'gu-IN',
-  'he', 'hi', 'hu', 'id', 'it', 'ja', 'kn', 'ko', 'ko-KR', 'lv', 'lt', 'mk', 'ms', 'mr', 'no', 'fa', 'pl', 'pt', 'pt-BR', 'pt-PT',
-  'ro', 'ru', 'sr', 'sk', 'sl', 'es', 'es-419', 'sv', 'sv-SE', 'tl', 'ta', 'te', 'th', 'th-TH', 'tr', 'uk', 'ur', 'vi',
+  'ar', 'be', 'bn', 'bs', 'bg', 'ca', 'zh', 'hr', 'cs', 'da', 'nl', 'en', 'et', 'fi', 'fr', 'de', 'el', 'gu',
+  'he', 'hi', 'hu', 'id', 'it', 'ja', 'kn', 'ko', 'lv', 'lt', 'mk', 'ms', 'mr', 'no', 'fa', 'pl', 'pt',
+  'ro', 'ru', 'sr', 'sk', 'sl', 'es', 'sv', 'tl', 'ta', 'te', 'th', 'tr', 'uk', 'ur', 'vi',
 ])
 
 const qwenAsrLanguages: SelectOption[] = [
@@ -210,6 +221,9 @@ type FormState = {
   voice_role: string
   preset: JobPreset
   workflow_mode: WorkflowMode
+  is_separate: boolean
+  embed_bgm: boolean
+  uvr_models: string
   nums_diariz: number
   speaker_ref_min_seconds: number
   speaker_ref_max_seconds: number
@@ -228,6 +242,9 @@ const initialForm: FormState = {
   voice_role: 'HoaiMy(Female)',
   preset: 'hosted',
   workflow_mode: 'single',
+  is_separate: false,
+  embed_bgm: true,
+  uvr_models: 'spleeter',
   nums_diariz: 0,
   speaker_ref_min_seconds: 10,
   speaker_ref_max_seconds: 15,
@@ -284,6 +301,9 @@ function buildParams(form: FormState): JobParams {
     subtitle_type: 0,
     output_srt: 0,
     recogn2pass: false,
+    is_separate: form.is_separate,
+    embed_bgm: form.is_separate ? form.embed_bgm : false,
+    uvr_models: form.uvr_models,
     enable_diariz: multiSpeaker,
     nums_diariz: multiSpeaker ? form.nums_diariz : 0,
     speaker_clone_mode: multiSpeaker ? 'auto' : 'off',
@@ -645,76 +665,178 @@ function App() {
     }
   }
 
+  const allProviders = providers ? [...providers.stt, ...providers.tts, ...providers.translators] : []
+  const readyProviderCount = allProviders.filter((provider) => getProviderStatus(provider, checks)?.status === 'ready').length
+  const jobStatusLabel = job ? job.status : 'idle'
+
   return (
-    <main>
-      <header className="hero-shell">
-        <div>
-          <span className="eyebrow">Voice-over studio</span>
-          <h1>Dịch video, tạo phụ đề, lồng tiếng.</h1>
-          <p>Backend-first app cho một người dùng. Chọn provider, chạy job, xem output trong cùng màn hình.</p>
+    <main className="app-shell">
+      <aside className="sidebar" aria-label="Dashboard navigation">
+        <div className="brand-block">
+          <span className="brand-mark">VO</span>
+          <div>
+            <strong>Voice-over</strong>
+            <small>Studio dashboard</small>
+          </div>
         </div>
-        <button className="secondary" type="button" onClick={() => refreshMetadata()}>Refresh readiness</button>
-      </header>
+        <nav className="nav-list">
+          <a href="#overview">Tổng quan</a>
+          <a href="#create-job">Tạo job</a>
+          <a href="#providers">Provider</a>
+          <a href="#progress">Tiến trình</a>
+        </nav>
+        <div className="sidebar-card">
+          <span>API</span>
+          <strong>{api.baseUrl}</strong>
+        </div>
+      </aside>
 
-      {error && <div className="error-box">{error}</div>}
+      <div className="dashboard-main">
+        <header className="topbar" id="overview">
+          <div>
+            <span className="eyebrow">Voice-over studio</span>
+            <h1>Dịch video, tạo phụ đề, lồng tiếng.</h1>
+            <p>Luồng rõ: input → ngôn ngữ → provider → giọng đọc → job/output.</p>
+          </div>
+          <button className="secondary" type="button" onClick={() => refreshMetadata()}>Refresh readiness</button>
+        </header>
 
-      <ProviderBoard providers={providers} checks={checks} />
+        <section className="stat-grid" aria-label="Dashboard summary">
+          <div className="stat-card">
+            <span>Providers ready</span>
+            <strong>{readyProviderCount}/{allProviders.length}</strong>
+          </div>
+          <div className="stat-card">
+            <span>Workflow</span>
+            <strong>{form.workflow_mode === 'multi-speaker' ? 'Auto clone' : 'Single voice'}</strong>
+          </div>
+          <div className="stat-card">
+            <span>Job status</span>
+            <strong>{jobStatusLabel}</strong>
+          </div>
+        </section>
 
-      <div className="workspace-grid">
-        <section className="panel form-panel">
-          <div className="panel-title">
-            <p>Tạo video_translate job</p>
-            <span>Không auth · local single-user</span>
-          </div>
-          <div className="preset-row">
-            <button type="button" className={form.workflow_mode === 'single' ? 'preset active' : 'preset'} onClick={() => setForm({ ...form, workflow_mode: 'single' })}>
-              {'1 gi\u1ecdng \u0111\u1ecdc'}
-            </button>
-            <button type="button" className={form.workflow_mode === 'multi-speaker' ? 'preset active' : 'preset'} onClick={() => setForm({ ...form, workflow_mode: 'multi-speaker', tts_type: 2, voice_role: 'clone' })}>
-              {'Nhi\u1ec1u ng\u01b0\u1eddi n\u00f3i \u00b7 auto clone'}
-            </button>
-          </div>
-          <div className="preset-row">
-            {(['hosted', 'local-qwen', 'local-funasr'] as const).map((preset) => (
-              <button
-                key={preset}
-                type="button"
-                className={form.preset === preset ? 'preset active' : 'preset'}
-                onClick={() => setForm((current) => applyPreset(preset, current))}
-              >
-                {preset === 'hosted' ? 'Deepgram + OpenAI + Azure' : preset === 'local-qwen' ? 'Qwen local STT' : 'FunASR local STT'}
-              </button>
-            ))}
-          </div>
-          <label className="field full">
-            <span>Video path</span>
-            <input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
-          </label>
-          <div className="field-grid">
-            <LanguageSelect
-              label="Source"
-              value={form.source_language_choice}
-              customValue={form.source_custom_code}
-              options={sourceOptions}
-              onValueChange={(source_language_choice) => setForm({ ...form, source_language_choice })}
-              onCustomChange={(source_custom_code) => setForm({ ...form, source_custom_code })}
-            />
-            <LanguageSelect
-              label="Target"
-              value={form.target_language_choice}
-              customValue={form.target_custom_code}
-              onValueChange={(target_language_choice) => setForm({ ...form, target_language_choice })}
-              onCustomChange={(target_custom_code) => setForm({ ...form, target_custom_code })}
-            />
-            <ProviderSelect label="STT" value={form.recogn_type} providers={providers?.stt ?? []} checks={checks} onChange={(recogn_type) => {
+        {error && <div className="error-box">{error}</div>}
+
+        <div className="workspace-grid">
+          <section className="panel form-panel" id="create-job">
+            <div className="panel-title">
+              <div>
+                <p>Tạo video_translate job</p>
+                <span>Không auth · local single-user</span>
+              </div>
+            </div>
+
+            <div className="form-section">
+              <div className="section-heading">
+                <span>01</span>
+                <div>
+                  <strong>Chọn chế độ</strong>
+                  <small>Một giọng đọc hoặc tự clone theo speaker.</small>
+                </div>
+              </div>
+              <div className="preset-row">
+                <button type="button" className={form.workflow_mode === 'single' ? 'preset active' : 'preset'} onClick={() => setForm({ ...form, workflow_mode: 'single' })}>
+                  {'1 gi\u1ecdng \u0111\u1ecdc'}
+                </button>
+                <button type="button" className={form.workflow_mode === 'multi-speaker' ? 'preset active' : 'preset'} onClick={() => setForm({ ...form, workflow_mode: 'multi-speaker', tts_type: 2, voice_role: 'clone' })}>
+                  {'Nhi\u1ec1u ng\u01b0\u1eddi n\u00f3i \u00b7 auto clone'}
+                </button>
+              </div>
+              <div className="preset-row">
+                {(['hosted', 'local-qwen', 'local-funasr'] as const).map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    className={form.preset === preset ? 'preset active' : 'preset'}
+                    onClick={() => setForm((current) => applyPreset(preset, current))}
+                  >
+                    {preset === 'hosted' ? 'Deepgram + OpenAI + Azure' : preset === 'local-qwen' ? 'Qwen local STT' : 'FunASR local STT'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="form-section">
+              <div className="section-heading">
+                <span>02</span>
+                <div>
+                  <strong>Input và ngôn ngữ</strong>
+                  <small>Path file local, source language, target language.</small>
+                </div>
+              </div>
+              <label className="field full">
+                <span>Video path</span>
+                <input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
+              </label>
+              <div className="field-grid">
+                <LanguageSelect
+                  label="Source"
+                  value={form.source_language_choice}
+                  customValue={form.source_custom_code}
+                  options={sourceOptions}
+                  onValueChange={(source_language_choice) => setForm({ ...form, source_language_choice })}
+                  onCustomChange={(source_custom_code) => setForm({ ...form, source_custom_code })}
+                />
+                <LanguageSelect
+                  label="Target"
+                  value={form.target_language_choice}
+                  customValue={form.target_custom_code}
+                  onValueChange={(target_language_choice) => setForm({ ...form, target_language_choice })}
+                  onCustomChange={(target_custom_code) => setForm({ ...form, target_custom_code })}
+                />
+              </div>
+            </div>
+
+            <div className="form-section">
+              <div className="section-heading">
+                <span>03</span>
+                <div>
+                  <strong>Provider pipeline</strong>
+                  <small>STT → translate → TTS.</small>
+                </div>
+              </div>
+              <div className="field-grid">
+                <ProviderSelect label="STT" value={form.recogn_type} providers={providers?.stt ?? []} checks={checks} onChange={(recogn_type) => {
                 const model_name = defaultSttModel(recogn_type)
                 setForm(formWithValidSource(form, { recogn_type, model_name }))
               }} />
-            <SttModelSelect recognType={form.recogn_type} value={form.model_name} onChange={(model_name) => {
+                <SttModelSelect recognType={form.recogn_type} value={form.model_name} onChange={(model_name) => {
                 setForm(formWithValidSource(form, { model_name }))
               }} />
-            <ProviderSelect label="Translator" value={form.translate_type} providers={providers?.translators ?? []} checks={checks} onChange={(translate_type) => setForm({ ...form, translate_type })} />
-            <ProviderSelect label="TTS" value={form.tts_type} providers={providers?.tts ?? []} checks={checks} onChange={(tts_type) => setForm({ ...form, tts_type, voice_role: form.workflow_mode === 'multi-speaker' ? 'clone' : form.voice_role })} />
+                <ProviderSelect label="Translator" value={form.translate_type} providers={providers?.translators ?? []} checks={checks} onChange={(translate_type) => setForm({ ...form, translate_type })} />
+                <ProviderSelect label="TTS" value={form.tts_type} providers={providers?.tts ?? []} checks={checks} onChange={(tts_type) => setForm({ ...form, tts_type, voice_role: form.workflow_mode === 'multi-speaker' ? 'clone' : form.voice_role })} />
+              </div>
+            </div>
+
+            <div className="form-section">
+              <div className="section-heading">
+                <span>04</span>
+                <div>
+                  <strong>Giọng đọc và xử lý audio</strong>
+                  <small>Clone voice, speaker split, vocal/background handling.</small>
+                </div>
+              </div>
+              <div className="clone-box">
+              <div>
+                <strong>{'Lọc giọng nói / tách vocal'}</strong>
+                <small>{'Tách vocal + background trước STT; nếu bật ghép BGM, backend nhúng lại nền sau khi lồng tiếng.'}</small>
+              </div>
+              <label className="check-field">
+                <input type="checkbox" checked={form.is_separate} onChange={(event) => setForm({ ...form, is_separate: event.target.checked })} />
+                <span>{'Bật tách vocal trước STT'}</span>
+              </label>
+              <label className="field">
+                <span>{'Model tách âm'}</span>
+                <select value={form.uvr_models} disabled={!form.is_separate} onChange={(event) => setForm({ ...form, uvr_models: event.target.value })}>
+                  {uvrModelOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                </select>
+              </label>
+              <label className="check-field">
+                <input type="checkbox" checked={form.embed_bgm} disabled={!form.is_separate} onChange={(event) => setForm({ ...form, embed_bgm: event.target.checked })} />
+                <span>{'Ghép lại nhạc nền đã tách'}</span>
+              </label>
+            </div>
             {form.workflow_mode === 'multi-speaker' && (
               <div className="clone-box">
                 <div>
@@ -764,14 +886,24 @@ function App() {
                 </button>
               </div>
             )}
-          </div>
-          <button className="primary" type="button" disabled={!canSubmit} onClick={submitJob}>
-            {loading ? 'Đang xử lý...' : 'Tạo job'}
-          </button>
-          {!canSubmit && <small className="hint">Điền video path và chọn provider ready để chạy.</small>}
-        </section>
+            </div>
+            <div className="submit-bar">
+              <button className="primary" type="button" disabled={!canSubmit} onClick={submitJob}>
+                {loading ? 'Đang xử lý...' : 'Tạo job'}
+              </button>
+              {!canSubmit && <small className="hint">Điền video path và chọn provider ready để chạy.</small>}
+            </div>
+          </section>
 
-        <JobProgress job={job} outputs={outputs} onCancel={cancelJob} />
+          <div className="side-stack">
+            <div id="providers">
+              <ProviderBoard providers={providers} checks={checks} />
+            </div>
+            <div id="progress">
+              <JobProgress job={job} outputs={outputs} onCancel={cancelJob} />
+            </div>
+          </div>
+        </div>
       </div>
     </main>
   )

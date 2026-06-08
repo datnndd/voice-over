@@ -40,6 +40,9 @@ class JobParams(BaseModel):
     subtitle_type: int | None = None
     output_srt: int | None = None
     recogn2pass: bool | None = None
+    is_separate: bool | None = None
+    embed_bgm: bool | None = None
+    uvr_models: str | None = None
     enable_diariz: bool | None = None
     nums_diariz: int | None = None
     speaker_clone_mode: str | None = None

@@ -833,7 +833,7 @@ class TransCreate(BaseTask):
         if tools.vail_file(self.cfg.vocal) and tools.vail_file(self.cfg.instrument):
             return
         title = tr('Separating vocals and background music, which may take a longer time')
-        uvr_models = settings.get('uvr_models')
+        uvr_models = (getattr(self.cfg, 'uvr_models', None) or settings.get('uvr_models') or 'spleeter').strip()
         if uvr_models.startswith('spleeter'):
             tools.down_file_from_ms(f'{ROOT_DIR}/models/onnx', [
                 f"https://www.modelscope.cn/models/himyworld/app_core/resolve/master/onnx/vocals.fp16.onnx",
