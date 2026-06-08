@@ -23,6 +23,7 @@ from ..configure import contants
 from ._base import BaseTask
 from app_core.util.help_ffmpeg import get_video_codec
 from app_core.task._rate import SpeedRate
+from app_core.task.speaker_clone import build_speaker_references
 from .taskcfg import TaskCfgVTT
 from ..configure.excepts import app_coreError, FFmpegError, SpeechToTextError
 
@@ -886,6 +887,24 @@ class TransCreate(BaseTask):
         line_roles = app_cfg.line_roles
         voice_role = self.cfg.voice_role
         force_clone = str(voice_role).strip().lower() == 'clone' and self.cfg.tts_type in SUPPORT_CLONE
+        auto_speaker_clone = str(getattr(self.cfg, 'speaker_clone_mode', 'off')).lower() == 'auto' and self.cfg.tts_type in SUPPORT_CLONE
+        speaker_refs = {}
+        speaker_labels = []
+        if auto_speaker_clone:
+            speaker_file = f"{self.cfg.cache_folder}/speaker.json"
+            if Path(speaker_file).exists():
+                speaker_refs = build_speaker_references(
+                    audio_file=self.cfg.source_wav,
+                    source_subs=source_subs,
+                    speaker_file=speaker_file,
+                    output_dir=self.cfg.target_dir,
+                    min_seconds=int(getattr(self.cfg, 'speaker_ref_min_seconds', 10) or 10),
+                    max_seconds=int(getattr(self.cfg, 'speaker_ref_max_seconds', 15) or 15),
+                )
+                try:
+                    speaker_labels = json.loads(Path(speaker_file).read_text(encoding='utf-8'))
+                except Exception:
+                    speaker_labels = []
 
         # 取出每一条字幕，行号\n开始时间 --> 结束时间\n内容
         for i, it in enumerate(subs):
@@ -915,8 +934,18 @@ class TransCreate(BaseTask):
                 "tts_type": self.cfg.tts_type,
                 "filename": f"{self.cfg.cache_folder}/dubb-{i}-{_key}.wav"
             }
-            # 如果是 clone 角色， 需要截取对应片段
-            if str(voice).strip().lower() == 'clone' and self.cfg.tts_type in SUPPORT_CLONE:
+            speaker_ref = None
+            if auto_speaker_clone and i < len(speaker_labels):
+                speaker_match = re.search(r'spk\d+', str(speaker_labels[i]), flags=re.I)
+                speaker_name = speaker_match.group(0).lower() if speaker_match else ''
+                speaker_ref = speaker_refs.get(speaker_name)
+            if speaker_ref:
+                tmp_dict['role'] = 'clone'
+                tmp_dict['ref_wav'] = speaker_ref.ref_wav
+                tmp_dict['ref_text'] = speaker_ref.ref_text
+                tmp_dict['ref_language'] = self.cfg.detect_language[:2]
+            # ??? clone ??? ????????
+            elif str(voice).strip().lower() == 'clone' and self.cfg.tts_type in SUPPORT_CLONE:
                 tmp_dict['ref_wav'] = f"{self.cfg.cache_folder}/clone-{i}.wav"
                 tmp_dict['ref_language'] = self.cfg.detect_language[:2]
             queue_tts.append(tmp_dict)
@@ -926,8 +955,9 @@ class TransCreate(BaseTask):
         if not self.queue_tts or len(self.queue_tts) < 1:
             raise RuntimeError(f'字幕长度为0，无法继续配音')
 
-        # 如果存在有 ref_wav 即需要clone，存在参考音频的
-        if len([it.get("ref_wav") for it in self.queue_tts if it.get("ref_wav")]) > 0:
+        # ????? ref_wav ???????????????????
+        needs_cut_refs = any(it.get("ref_wav") and not Path(it.get("ref_wav")).exists() for it in self.queue_tts)
+        if needs_cut_refs:
             self._create_ref_from_vocal()
 
         # 调用配音渠道

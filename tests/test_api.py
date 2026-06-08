@@ -30,7 +30,9 @@ def test_job_api_create_get_cancel_and_outputs(tmp_path):
 
         outputs = client.get(f"/jobs/{job_id}/outputs")
         assert outputs.status_code == 200
-        assert outputs.json()["job_id"] == job_id
+        output_payload = outputs.json()
+        assert output_payload["job_id"] == job_id
+        assert output_payload["outputs"] == []
 
         canceled = client.post(f"/jobs/{job_id}/cancel")
         assert canceled.status_code == 200

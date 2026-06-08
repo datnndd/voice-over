@@ -7,7 +7,7 @@ from typing import Any
 
 from app.core_facade import CoreFacade, run_core_job
 from app.db import JobRepository
-from app.models import JobStatus, JobType
+from app.models import JobStatus, JobType, OutputFile
 
 
 class JobWorker:
@@ -83,10 +83,34 @@ class JobWorker:
         SignalHub.instance().new_message.connect(_record_event)
 
 
-def list_output_files(target_dir: str | None) -> list[str]:
+def _output_kind(extension: str) -> str:
+    normalized = extension.lower()
+    if normalized in {".srt", ".vtt", ".ass"}:
+        return "subtitle"
+    if normalized in {".wav", ".mp3", ".m4a", ".aac", ".flac", ".ogg"}:
+        return "audio"
+    if normalized in {".mp4", ".mov", ".mkv", ".webm"}:
+        return "video"
+    return "other"
+
+def list_output_files(target_dir: str | None) -> list[OutputFile]:
     if not target_dir:
         return []
     path = Path(target_dir)
     if not path.exists():
         return []
-    return [item.as_posix() for item in path.rglob("*") if item.is_file()]
+    outputs: list[OutputFile] = []
+    for item in path.rglob("*"):
+        if not item.is_file():
+            continue
+        extension = item.suffix.lower()
+        outputs.append(
+            OutputFile(
+                path=item.as_posix(),
+                filename=item.name,
+                extension=extension,
+                kind=_output_kind(extension),
+                size_bytes=item.stat().st_size,
+            )
+        )
+    return outputs

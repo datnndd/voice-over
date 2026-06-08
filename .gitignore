@@ -11,6 +11,10 @@ dist/
 scripts/bin/harness-cli
 scripts/bin/harness-cli.exe
 
+# JavaScript/runtime artifacts.
+node_modules/
+frontend/node_modules/
+
 # Python/runtime artifacts.
 __pycache__/
 *.py[cod]

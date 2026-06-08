@@ -174,6 +174,9 @@ class TaskCfgVTT(TaskCfgSTT, TaskCfgTTS, TaskCfgSTS):
     only_out_mp4: bool = False  # 是否仅仅输出mp4,仅视频翻译使用
     recogn2pass: bool = False  # 对配音音频再次识别
     output_srt: int = 0  # 转录并翻译 模式输出字幕类似，0=单字幕，1=目标语言在线双字幕，2=目标语言在上双字幕
+    speaker_clone_mode: str = "off"  # off=single voice, auto=diarize speakers and auto-create clone refs
+    speaker_ref_min_seconds: int = 10
+    speaker_ref_max_seconds: int = 15
     copysrt_rawvideo: bool = False  # 是否将生成的字幕复制到视频目录下
     loop_backaudio: int = 0  # 循环背景音 或 延长拉伸背景音
     backaudio_volume: float = 0.8  # 背景音量

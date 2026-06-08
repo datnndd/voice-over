@@ -16,6 +16,8 @@ Run API:
 python -m uvicorn app.main:app --reload
 ```
 
+API contract for frontend work lives at `docs/API_CONTRACT.md`.
+
 Useful endpoints:
 
 - `POST /jobs`

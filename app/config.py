@@ -11,6 +11,10 @@ def parse_csv_env(name: str) -> frozenset[str]:
     raw = os.getenv(name, "")
     return frozenset(item.strip().lower() for item in raw.split(",") if item.strip())
 
+def parse_list_env(name: str, default: str = "") -> tuple[str, ...]:
+    raw = os.getenv(name, default)
+    return tuple(item.strip() for item in raw.split(",") if item.strip())
+
 
 @dataclass(frozen=True)
 class Settings:
@@ -19,6 +23,10 @@ class Settings:
     worker_enabled: bool = os.getenv("VOICE_OVER_WORKER", "1") != "0"
     provider_allow: frozenset[str] = parse_csv_env("VOICE_OVER_PROVIDER_ALLOW")
     provider_deny: frozenset[str] = parse_csv_env("VOICE_OVER_PROVIDER_DENY")
+    frontend_origins: tuple[str, ...] = parse_list_env(
+        "VOICE_OVER_FRONTEND_ORIGINS",
+        "http://localhost:5173,http://127.0.0.1:5173",
+    )
 
 
 settings = Settings()

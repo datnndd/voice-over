@@ -2,16 +2,18 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.db import JobRepository
-from app.models import JobCreate, JobDetail, JobRead, OutputList, ProviderList, RuntimeCheckRead
+from app.models import CloneVoiceRef, JobCreate, JobDetail, JobRead, OutputList, ProviderList, RuntimeCheckRead, VoiceList
 from app.providers import list_providers
 from app.runtime_config import load_runtime_config
 from app.runtime_checks import check_runtime
 from app.service import JobService
 from app.worker import JobWorker
+from app.voices import list_voices, save_clone_reference
 
 
 def build_service() -> JobService:
@@ -31,6 +33,13 @@ async def lifespan(api: FastAPI):
 
 
 app = FastAPI(title="Voice Over API", version="0.1.0", lifespan=lifespan)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=list(settings.frontend_origins),
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.state.service = build_service()
 
 
@@ -72,6 +81,18 @@ def providers() -> ProviderList:
     return list_providers()
 
 
+
+
+@app.post("/voices/clone-refs", response_model=CloneVoiceRef)
+async def upload_clone_reference(file: UploadFile = File(...), ref_text: str = Form(...)) -> CloneVoiceRef:
+    try:
+        return save_clone_reference(file.filename or "clone.wav", await file.read(), ref_text)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+@app.get("/voices", response_model=VoiceList)
+def voices(tts_type: int, language: str | None = None) -> VoiceList:
+    return list_voices(tts_type, language)
 
 @app.get("/runtime/checks", response_model=list[RuntimeCheckRead])
 def runtime_checks() -> list[RuntimeCheckRead]:

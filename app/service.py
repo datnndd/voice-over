@@ -37,7 +37,7 @@ class JobService:
         job_id = str(uuid.uuid4())
         target_dir = (self.outputs_dir / job_id).resolve()
         target_dir.mkdir(parents=True, exist_ok=True)
-        params = normalize_media_params(request.params, target_dir)
+        params = normalize_media_params(request.params.model_dump(exclude_none=True), target_dir)
         params.setdefault("uuid", job_id)
         job = self.repository.create_job(job_id, request.type, params, target_dir.as_posix())
         self.repository.add_event(job_id, "logs", "job queued")

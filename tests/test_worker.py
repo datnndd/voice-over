@@ -33,5 +33,12 @@ def test_worker_runs_facade_and_records_outputs(tmp_path):
     job = worker.run_once("job-1")
 
     assert job["status"] == JobStatus.succeeded.value
-    assert list_output_files(target_dir.as_posix()) == [(target_dir / "result.srt").as_posix()]
+    outputs = list_output_files(target_dir.as_posix())
+
+    assert len(outputs) == 1
+    assert outputs[0].path == (target_dir / "result.srt").as_posix()
+    assert outputs[0].filename == "result.srt"
+    assert outputs[0].extension == ".srt"
+    assert outputs[0].kind == "subtitle"
+    assert outputs[0].size_bytes > 0
 
