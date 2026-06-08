@@ -30,3 +30,10 @@ def test_removed_llm_prompts_are_not_present():
     expected = {"chatgpt.txt", "deepseek.txt"}
     assert {path.name for path in Path("app_core/prompts/srt").glob("*.txt")} == expected
     assert {path.name for path in Path("app_core/prompts/text").glob("*.txt")} == expected
+
+def test_get_audio_code_preserves_raw_language_codes():
+    assert translator.get_audio_code(show_source="zh") == "zh"
+    assert translator.get_audio_code(show_source="zh-HK") == "zh-HK"
+    assert translator.get_audio_code(show_source="zh_TW") == "zh-TW"
+    assert translator.get_audio_code(show_source="vi") == "vi"
+    assert translator.get_audio_code(show_source="auto") == "auto"

@@ -99,6 +99,35 @@ def _deepgram_srt_from_response(response: object, language: str | None) -> str:
     return srt_text
 
 
+def _deepgram_response_summary(response: object) -> dict[str, object]:
+    try:
+        if hasattr(response, 'get'):
+            results = response.get('results', {})
+        else:
+            try:
+                results = response['results']  # type: ignore[index]
+            except Exception:
+                results = getattr(response, 'results', {})
+        channels = results.get('channels', []) if hasattr(results, 'get') else getattr(results, 'channels', [])
+        utterances = results.get('utterances', []) if hasattr(results, 'get') else getattr(results, 'utterances', [])
+        channel_count = len(channels or [])
+        utterance_count = len(utterances or [])
+        transcript_count = 0
+        for channel in channels or []:
+            alternatives = channel.get('alternatives', []) if hasattr(channel, 'get') else getattr(channel, 'alternatives', [])
+            for alternative in alternatives or []:
+                transcript = alternative.get('transcript', '') if hasattr(alternative, 'get') else getattr(alternative, 'transcript', '')
+                if str(transcript).strip():
+                    transcript_count += 1
+        return {
+            'channels': channel_count,
+            'utterances': utterance_count,
+            'non_empty_transcripts': transcript_count,
+        }
+    except Exception as exc:
+        return {'summary_error': str(exc)}
+
+
 @dataclass
 class DeepgramRecogn(BaseRecogn):
 
@@ -128,6 +157,8 @@ class DeepgramRecogn(BaseRecogn):
         model_name = _deepgram_model_name(self.model_name)
         language = _deepgram_language_code(self.detect_language)
         _validate_deepgram_language(model_name, language)
+        self.signal(text=f'Deepgram request: model={model_name}, language={language or "auto-detect"}, diarize={diarize}')
+        logger.info(f'Deepgram request: model={model_name}, language={language or "auto-detect"}, diarize={diarize}, audio={Path(self.audio_file).name}, bytes={len(buffer_data)}')
         options = PrerecordedOptions(
             model=model_name,
             detect_language=language is None,
@@ -142,6 +173,9 @@ class DeepgramRecogn(BaseRecogn):
         )
 
         res = deepgram.listen.rest.v("1").transcribe_file(payload, options, timeout=600)
+        response_summary = _deepgram_response_summary(res)
+        self.signal(text=f'Deepgram response: {json.dumps(response_summary, ensure_ascii=False)}')
+        logger.info(f'Deepgram response summary: {response_summary}')
 
         raws = []
         if diarize:
@@ -165,13 +199,22 @@ class DeepgramRecogn(BaseRecogn):
             if speaker_list:
                 Path(f'{self.cache_folder}/speaker.json').write_text(json.dumps(speaker_list), encoding='utf-8')
         else:
-            srt_str = _deepgram_srt_from_response(res, self.detect_language)
+            try:
+                srt_str = _deepgram_srt_from_response(res, self.detect_language)
+            except Exception as exc:
+                logger.warning(f'Deepgram SRT generation failed: {exc}; response_summary={response_summary}')
+                self.signal(text=f'Deepgram SRT generation failed: {exc}; summary={json.dumps(response_summary, ensure_ascii=False)}', type='error')
+                raise
+            self.signal(text=f'Deepgram SRT generated: chars={len(srt_str)}')
             raws = tools.get_subtitle_from_srt(srt_str, is_file=False)
             if self.detect_language[:2] in contants.CJK_LANG:
                 for i, it in enumerate(raws):
                     if self.detect_language[:2] == 'zh':
                         it['text'] = zhconv.convert(it['text'], 'zh-hans')
                     raws[i]['text'] = it['text'].replace(' ', '')
+
+        self.signal(text=f'Deepgram subtitles parsed: lines={len(raws)}')
+        logger.info(f'Deepgram subtitles parsed: lines={len(raws)}')
 
         return raws
 

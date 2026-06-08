@@ -88,7 +88,10 @@ class TransCreate(BaseTask):
         # 输出文件夹，去掉可能存在的双斜线
         self.cfg.target_dir = re.sub(r'/{2,}', '/', self.cfg.target_dir, flags=re.I | re.S)
         # 检测字幕原始语言
-        self.cfg.detect_language = get_audio_code(show_source=self.cfg.source_language_code)
+        detect_language = get_audio_code(show_source=self.cfg.source_language_code)
+        if detect_language == 'auto' and self.cfg.detect_language and self.cfg.detect_language not in ['auto', '-']:
+            detect_language = self.cfg.detect_language
+        self.cfg.detect_language = detect_language
 
         # 存放分离后的无声mp4到临时文件夹
         self.cfg.novoice_mp4 = f"{self.cfg.cache_folder}/novoice.mp4"

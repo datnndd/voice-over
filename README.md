@@ -95,6 +95,51 @@ Useful endpoints:
 - `POST /jobs/{job_id}/cancel`
 - `GET /providers`
 
+## Deepgram STT API example
+
+Start backend first:
+
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+```
+
+Create a Deepgram-only STT job. `recogn_type: 10` is Deepgram and this app only uses `nova-3` for Deepgram.
+
+```powershell
+$body = @{
+  type = "stt"
+  params = @{
+    name = "C:/Users/ddat2/Downloads/voice-over/test.mp4"
+    source_language = "zh-HK"
+    source_language_code = "zh-HK"
+    detect_language = "zh-HK"
+    recogn_type = 10
+    model_name = "nova-3"
+    app_mode = "tiqu"
+    subtitle_type = 0
+    output_srt = 0
+    recogn2pass = $false
+  }
+} | ConvertTo-Json -Depth 5
+
+$job = Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/jobs" -ContentType "application/json" -Body $body
+$job
+```
+
+Poll job status and logs:
+
+```powershell
+Invoke-RestMethod "http://127.0.0.1:8000/jobs/$($job.id)" | ConvertTo-Json -Depth 8
+```
+
+List output files after `status` becomes `succeeded`:
+
+```powershell
+Invoke-RestMethod "http://127.0.0.1:8000/jobs/$($job.id)/outputs" | ConvertTo-Json -Depth 5
+```
+
+Deepgram job events now include safe diagnostics such as request model/language, response channel and utterance counts, SRT generation status, and parsed subtitle line count. API keys and audio bytes are not logged.
+
 Run validation:
 
 ```powershell

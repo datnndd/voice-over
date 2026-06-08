@@ -50,3 +50,19 @@ def test_deepgram_srt_helper_rejects_empty_caption(monkeypatch):
         assert "empty SRT" in str(exc)
     else:
         raise AssertionError("empty Deepgram caption should fail")
+
+
+def test_deepgram_response_summary_counts_transcripts_and_utterances():
+    summary = _deepgram._deepgram_response_summary(
+        {
+            "results": {
+                "channels": [
+                    {"alternatives": [{"transcript": "hello"}, {"transcript": ""}]},
+                    {"alternatives": [{"transcript": "world"}]},
+                ],
+                "utterances": [{"transcript": "hello"}],
+            }
+        }
+    )
+
+    assert summary == {"channels": 2, "utterances": 1, "non_empty_transcripts": 2}

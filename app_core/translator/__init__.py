@@ -733,7 +733,25 @@ def get_audio_code(*, show_source=None):
         return 'auto'
     source_list = LANG_CODE[show_source] if show_source in LANG_CODE else LANG_CODE.get(
         LANGNAME_DICT_REV.get(show_source))
-    return source_list[0] if source_list else "auto"
+    if source_list:
+        return source_list[0]
+    normalized = str(show_source).strip().replace('_', '-')
+    normalized_lower = normalized.lower()
+    language_aliases = {
+        'zh': 'zh',
+        'zh-cn': 'zh-CN',
+        'zh-hans': 'zh-Hans',
+        'zh-tw': 'zh-TW',
+        'zh-hant': 'zh-Hant',
+        'zh-hk': 'zh-HK',
+        'yue': 'yue',
+        'yue-hk': 'yue',
+    }
+    if normalized_lower in language_aliases:
+        return language_aliases[normalized_lower]
+    if re.match(r'^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$', normalized):
+        return normalized
+    return "auto"
 
 
 # 获取嵌入MP4视频嵌入软字幕的3位字母语言代码 ISO 639-2/T ，根据目标语言确定
