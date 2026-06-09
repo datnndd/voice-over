@@ -72,9 +72,6 @@ export type OutputFile = {
   extension: string
   kind: OutputKind
   size_bytes: number
-  storage: 'local' | 'google_drive'
-  drive_file_id: string | null
-  drive_web_view_link: string | null
 }
 
 export type OutputList = {
@@ -103,12 +100,6 @@ export type CloneVoiceRef = {
   name: string
   path: string
   ref_text: string
-}
-
-export type UploadedMedia = {
-  filename: string
-  path: string
-  size_bytes: number
 }
 
 export type VoiceInfo = {
@@ -158,14 +149,6 @@ export const api = {
     formData.append('file', file)
     formData.append('ref_text', refText)
     return request<CloneVoiceRef>('/voices/clone-refs', {
-      method: 'POST',
-      body: formData,
-    })
-  },
-  uploadMedia: (file: File) => {
-    const formData = new FormData()
-    formData.append('file', file)
-    return request<UploadedMedia>('/uploads/media', {
       method: 'POST',
       body: formData,
     })

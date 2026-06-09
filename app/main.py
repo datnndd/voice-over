@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.db import JobRepository
-from app.models import CloneVoiceRef, JobCreate, JobDetail, JobRead, OutputList, ProviderList, RuntimeCheckRead, UploadedMedia, VoiceList
+from app.models import CloneVoiceRef, JobCreate, JobDetail, JobRead, OutputList, ProviderList, RuntimeCheckRead, VoiceList
 from app.providers import list_providers
 from app.runtime_config import load_runtime_config
 from app.runtime_checks import check_runtime
@@ -20,7 +20,7 @@ def build_service() -> JobService:
     load_runtime_config()
     repository = JobRepository(settings.database_path)
     worker = JobWorker(repository)
-    return JobService(repository, worker, settings.outputs_dir, settings.uploads_dir)
+    return JobService(repository, worker, settings.outputs_dir)
 
 
 @asynccontextmanager
@@ -50,13 +50,6 @@ def get_service() -> JobService:
 @app.post("/jobs", response_model=JobRead, status_code=202)
 def create_job(request: JobCreate) -> JobRead:
     return get_service().create_job(request)
-
-@app.post("/uploads/media", response_model=UploadedMedia)
-async def upload_media(file: UploadFile = File(...)) -> UploadedMedia:
-    try:
-        return get_service().save_uploaded_media(file.filename or "upload.mp4", await file.read())
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.get("/jobs/{job_id}", response_model=JobDetail)

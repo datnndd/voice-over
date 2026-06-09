@@ -89,18 +89,10 @@ class OutputFile(ApiModel):
     extension: str
     kind: Literal["subtitle", "audio", "video", "other"]
     size_bytes: int
-    storage: Literal["local", "google_drive"] = "local"
-    drive_file_id: str | None = None
-    drive_web_view_link: str | None = None
 
 class OutputList(ApiModel):
     job_id: str
     outputs: list[OutputFile]
-
-class UploadedMedia(ApiModel):
-    filename: str
-    path: str
-    size_bytes: int
 
 
 

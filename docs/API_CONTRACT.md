@@ -12,7 +12,6 @@ This contract is the stable surface for the frontend. Backend internals and `app
 - Secrets: never sent through API payloads; provider secrets come from `.env` / environment.
 - Paths: response paths are absolute filesystem paths on the backend machine.
 - Processing outputs default to `C:\Users\ddat2\Downloads` unless `VOICE_OVER_OUTPUTS` overrides it.
-- When Google Drive upload is enabled, successful job outputs are uploaded to Drive and local processing files are deleted after upload succeeds.
 - Unknown provider/runtime fields must be treated as read-only metadata by frontend.
 
 ## Job Types
@@ -37,28 +36,6 @@ This contract is the stable surface for the frontend. Backend internals and `app
 ## `POST /jobs`
 
 Creates a queued job. Long processing is asynchronous.
-
-## `POST /uploads/media`
-
-Uploads source media from the browser/local client before creating a job. Use the returned `path` as `params.name` in `POST /jobs`.
-
-### Request
-
-Multipart form data:
-
-| Field | Type | Required | Notes |
-| --- | --- | --- | --- |
-| `file` | file | yes | Source media file, e.g. `.mp4`, `.mov`, `.mkv`. |
-
-### Response `200`
-
-```json
-{
-  "filename": "input.mp4",
-  "path": "C:/Users/ddat2/Downloads/voice-over/data/uploads/.../input.mp4",
-  "size_bytes": 123456
-}
-```
 
 ### Request
 
@@ -204,56 +181,32 @@ Returns structured files found under job `target_dir`.
       "filename": "video_renew.mp4",
       "extension": ".mp4",
       "kind": "video",
-      "size_bytes": 123456,
-      "storage": "google_drive",
-      "drive_file_id": "1abc...",
-      "drive_web_view_link": "https://drive.google.com/file/d/1abc.../view"
+      "size_bytes": 123456
     },
     {
       "path": "C:/Users/ddat2/Downloads/.../voice_target.m4a",
       "filename": "voice_target.m4a",
       "extension": ".m4a",
       "kind": "audio",
-      "size_bytes": 123456,
-      "storage": "google_drive",
-      "drive_file_id": "1def...",
-      "drive_web_view_link": "https://drive.google.com/file/d/1def.../view"
+      "size_bytes": 123456
     },
     {
       "path": "C:/Users/ddat2/Downloads/.../source.srt",
       "filename": "source.srt",
       "extension": ".srt",
       "kind": "subtitle",
-      "size_bytes": 1234,
-      "storage": "google_drive",
-      "drive_file_id": "1ghi...",
-      "drive_web_view_link": "https://drive.google.com/file/d/1ghi.../view"
+      "size_bytes": 1234
     },
     {
       "path": "C:/Users/ddat2/Downloads/.../target.srt",
       "filename": "target.srt",
       "extension": ".srt",
       "kind": "subtitle",
-      "size_bytes": 1234,
-      "storage": "google_drive",
-      "drive_file_id": "1jkl...",
-      "drive_web_view_link": "https://drive.google.com/file/d/1jkl.../view"
+      "size_bytes": 1234
     }
   ]
 }
 ```
-
-If Google Drive upload is disabled or the job has not been cleaned up yet, `storage` is `local` and `path` is the local filesystem path.
-
-## Google Drive Cleanup
-
-Enable Drive upload with:
-
-- `VOICE_OVER_GOOGLE_DRIVE_ENABLED=1`
-- `VOICE_OVER_GOOGLE_DRIVE_FOLDER_ID=<folder id>`
-- one of `VOICE_OVER_GOOGLE_DRIVE_CREDENTIALS_FILE` or `VOICE_OVER_GOOGLE_DRIVE_CREDENTIALS_JSON`
-
-The backend uploads all generated output files after a successful job. It deletes the job output directory and API-uploaded input file only after all uploads succeed. If Drive upload fails, the job fails and local files remain for recovery.
 
 `kind` must be one of:
 

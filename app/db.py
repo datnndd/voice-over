@@ -29,20 +29,6 @@ create table if not exists job_events (
     created_at text not null default (datetime('now')),
     foreign key(job_id) references jobs(id)
 );
-
-create table if not exists job_drive_outputs (
-    id integer primary key autoincrement,
-    job_id text not null,
-    local_path text not null,
-    filename text not null,
-    extension text not null,
-    kind text not null,
-    size_bytes integer not null,
-    drive_file_id text not null,
-    drive_web_view_link text,
-    created_at text not null default (datetime('now')),
-    foreign key(job_id) references jobs(id)
-);
 """
 
 
@@ -125,35 +111,6 @@ class JobRepository:
                 "insert into job_events (job_id, type, text) values (?, ?, ?)",
                 (job_id, event_type, text),
             )
-
-    def add_drive_output(self, job_id: str, output: dict[str, Any]) -> None:
-        with self._connect() as conn:
-            conn.execute(
-                """
-                insert into job_drive_outputs (
-                    job_id, local_path, filename, extension, kind, size_bytes,
-                    drive_file_id, drive_web_view_link
-                ) values (?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    job_id,
-                    output["local_path"],
-                    output["filename"],
-                    output["extension"],
-                    output["kind"],
-                    output["size_bytes"],
-                    output["drive_file_id"],
-                    output.get("drive_web_view_link"),
-                ),
-            )
-
-    def list_drive_outputs(self, job_id: str) -> list[dict[str, Any]]:
-        with self._connect() as conn:
-            rows = conn.execute(
-                "select * from job_drive_outputs where job_id = ? order by id asc",
-                (job_id,),
-            ).fetchall()
-        return [dict(row) for row in rows]
 
     def list_events(self, job_id: str) -> list[dict[str, Any]]:
         with self._connect() as conn:

@@ -41,7 +41,6 @@ http://127.0.0.1:5173
 If frontend shows `Failed to fetch`, backend is probably not running on `http://127.0.0.1:8000`.
 
 Processing outputs are written under `C:\Users\ddat2\Downloads` by default. Set `VOICE_OVER_OUTPUTS` to use another folder.
-Use `POST /uploads/media` when users upload videos through the API. Set `VOICE_OVER_GOOGLE_DRIVE_ENABLED=1` plus Google Drive folder and service-account credentials to upload successful outputs to Drive and delete local processing files after upload succeeds.
 
 Override frontend API URL if needed:
 

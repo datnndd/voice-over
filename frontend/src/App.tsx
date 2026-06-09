@@ -523,9 +523,7 @@ function JobProgress({ job, outputs, onCancel }: { job: JobDetail | null; output
             <span className={`kind ${output.kind}`}>{output.kind}</span>
             <div>
               <strong>{output.filename}</strong>
-              {output.storage === 'google_drive' && output.drive_web_view_link ? (
-                <small><a href={output.drive_web_view_link} target="_blank" rel="noreferrer">Google Drive</a></small>
-              ) : <small>{output.path}</small>}
+              <small>{output.path}</small>
             </div>
             <em>{formatBytes(output.size_bytes)}</em>
           </div>
@@ -551,8 +549,6 @@ function App() {
   const [job, setJob] = useState<JobDetail | null>(null)
   const [outputs, setOutputs] = useState<OutputFile[]>([])
   const [voices, setVoices] = useState<VoiceInfo[]>([])
-  const [mediaFile, setMediaFile] = useState<File | null>(null)
-  const [uploadingMedia, setUploadingMedia] = useState(false)
   const [cloneFile, setCloneFile] = useState<File | null>(null)
   const [cloneRefText, setCloneRefText] = useState('')
   const [uploadingClone, setUploadingClone] = useState(false)
@@ -567,7 +563,7 @@ function App() {
   const sourceLanguageCode = resolveLanguageCode(form.source_language_choice, form.source_custom_code)
   const targetLanguageCode = resolveLanguageCode(form.target_language_choice, form.target_custom_code)
   const languagesReady = Boolean(sourceLanguageCode && targetLanguageCode)
-  const canSubmit = Boolean(form.name.trim() || mediaFile) && languagesReady && selectedSttReady && selectedTtsReady && selectedTranslatorReady && !loading && !uploadingMedia
+  const canSubmit = Boolean(form.name.trim()) && languagesReady && selectedSttReady && selectedTtsReady && selectedTranslatorReady && !loading
 
   async function refreshMetadata() {
     const [providerPayload, checkPayload] = await Promise.all([api.getProviders(), api.getRuntimeChecks()])
@@ -633,21 +629,12 @@ function App() {
       if (safeForm.source_language_choice !== form.source_language_choice) {
         setForm(safeForm)
       }
-      let jobForm = safeForm
-      if (mediaFile) {
-        setUploadingMedia(true)
-        const uploaded = await api.uploadMedia(mediaFile)
-        jobForm = { ...safeForm, name: uploaded.path }
-        setForm(jobForm)
-        setUploadingMedia(false)
-      }
-      const created = await api.createJob({ type: 'video_translate', params: buildParams(jobForm) })
+      const created = await api.createJob({ type: 'video_translate', params: buildParams(safeForm) })
       const detail = await api.getJob(created.id)
       setJob(detail)
       setOutputs([])
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught))
-      setUploadingMedia(false)
     } finally {
       setLoading(false)
     }
@@ -781,13 +768,9 @@ function App() {
                 <span>02</span>
                 <div>
                   <strong>Input và ngôn ngữ</strong>
-                  <small>Upload video hoặc dùng path local, source language, target language.</small>
+                  <small>Path file local, source language, target language.</small>
                 </div>
               </div>
-              <label className="field full">
-                <span>Upload video</span>
-                <input type="file" accept="video/*,.mp4,.mov,.mkv,.webm" onChange={(event) => setMediaFile(event.target.files?.[0] ?? null)} />
-              </label>
               <label className="field full">
                 <span>Video path</span>
                 <input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
@@ -920,9 +903,9 @@ function App() {
             </div>
             <div className="submit-bar">
               <button className="primary" type="button" disabled={!canSubmit} onClick={submitJob}>
-                {uploadingMedia ? 'Đang upload video...' : loading ? 'Đang xử lý...' : 'Tạo job'}
+                {loading ? 'Đang xử lý...' : 'Tạo job'}
               </button>
-              {!canSubmit && <small className="hint">Upload video hoặc điền video path, rồi chọn provider ready để chạy.</small>}
+              {!canSubmit && <small className="hint">Điền video path và chọn provider ready để chạy.</small>}
             </div>
           </section>
 
