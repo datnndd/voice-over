@@ -26,8 +26,9 @@ def test_openapi_exposes_stable_contract_schemas():
         assert schema_name in schemas
 
     output_props = schemas["OutputFile"]["properties"]
-    assert set(output_props) == {"path", "filename", "extension", "kind", "size_bytes"}
+    assert set(output_props) == {"path", "filename", "extension", "kind", "size_bytes", "storage", "drive_file_id", "drive_web_view_link"}
     assert output_props["kind"]["enum"] == ["subtitle", "audio", "video", "other"]
+    assert output_props["storage"]["default"] == "local"
 
 
 def test_job_create_rejects_unknown_top_level_fields():

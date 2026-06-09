@@ -5,6 +5,7 @@ import shutil
 from dataclasses import dataclass
 
 from app.runtime_config import load_runtime_config
+from app.config import settings
 from app_core import recognition, translator, tts
 from app_core.configure.config import params
 
@@ -42,6 +43,10 @@ PROVIDER_REQUIREMENTS = {
     ("tts", tts.OMNIVOICE_TTS): {
         "params": ["omnivoice_url"],
         "modules": ["gradio_client"],
+    },
+    ("tts", tts.VIENEU_TTS): {
+        "params": [],
+        "modules": ["vieneu"],
     },
     ("translator", translator.CHATGPT_INDEX): {
         "params": ["chatgpt_key"],
@@ -90,4 +95,14 @@ def check_runtime() -> list[RuntimeCheck]:
         checks.append(check_provider("translator", provider_id, provider.name))
     ffmpeg_missing = [] if shutil.which("ffmpeg") else ["binary:ffmpeg"]
     checks.append(RuntimeCheck("system", None, "ffmpeg", "ready" if not ffmpeg_missing else "missing", ffmpeg_missing))
+    if settings.google_drive_enabled:
+        drive_missing: list[str] = []
+        if not settings.google_drive_folder_id:
+            drive_missing.append("param:google_drive_folder_id")
+        if not settings.google_drive_credentials_file and not settings.google_drive_credentials_json:
+            drive_missing.append("param:google_drive_credentials")
+        for module_name in ("googleapiclient", "google.oauth2.service_account"):
+            if _module_missing(module_name):
+                drive_missing.append(f"module:{module_name}")
+        checks.append(RuntimeCheck("system", None, "google_drive", "ready" if not drive_missing else "missing", drive_missing))
     return checks

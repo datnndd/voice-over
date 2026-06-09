@@ -131,6 +131,7 @@ class TaskCfgSTT(TaskCfgBase):
     nums_diariz: int = 0  # 是否进行说话人识别
     rephrase: int = 2  # 0 默认断句不处理 1=LLM重新断句 2=自动修正
     fix_punc: bool = False  # 是否恢复标点符号
+    stt_punctuate: bool = True  # 是否启用STT渠道自带标点符号
 
 
 # 配音
@@ -162,8 +163,8 @@ class TaskCfgVTT(TaskCfgSTT, TaskCfgTTS, TaskCfgSTS):
     subtitle_language: str = None  # 软字幕嵌入语言代码，3位
     app_mode: str = "biaozhun"  # 工作模式 biaohzun tiqu
     subtitles: str = ""  # 已存在的字幕文本，例如预先导入的
-    targetdir_mp4: Union[os.PathLike,str]=None  # 最终输出合成后的mp4
-    novoice_mp4: Union[os.PathLike,str]=None  # 从原始视频分离出的无声视频
+    targetdir_mp4: Union[os.PathLike,str]=None  # 输出视频副本 video_renew.<ext>
+    novoice_mp4: Union[os.PathLike,str]=None  # 兼容旧字段，新版视频翻译不再生成无声视频
     is_separate: bool = False  # 是否进行人声、背景音分离
     embed_bgm: bool = True  # 是否需要重新嵌入背景音
     uvr_models: str = "spleeter"  # 分离背景声模型

@@ -57,6 +57,7 @@ class BaseRecogn(BaseCon):
     llm_post: bool = False  # 是否进行llm重新断句，如果是，则无需在识别完成后进行简单修正
     speech_timestamps: List = field(default_factory=list)  # vad切割好的数据
     recogn2pass: bool = False
+    punctuate: bool = True
 
     def __post_init__(self):
         super().__post_init__()
@@ -130,7 +131,7 @@ class BaseRecogn(BaseCon):
         # LLM重新断句，未选中合并过短字幕、whisper模型且没有预先分割，这3种情况直接返回
         if self.llm_post or not settings.get('merge_short_sub', True) or (
                 self.recogn_type < 2 and not settings.get('whisper_prepare')):
-            if settings.get('del_end_punc'):
+            if settings.get('del_end_punc') and not self.punctuate:
                 logger.debug(f'开始移除每条字幕末尾标点')
                 for it in srt_list:
                     # 移除末尾标点
@@ -289,7 +290,7 @@ class BaseRecogn(BaseCon):
         post_srt_raws = self._phase4_redistribute_by_punct(post_srt_raws, forward=False)
 
         # 阶段 6：清理尾部标点，剔除空白字幕
-        if settings.get('del_end_punc'):
+        if settings.get('del_end_punc') and not self.punctuate:
             for it in post_srt_raws:
                 # 删除尾部标点
                 it['text'] = it['text'].strip('。,.').strip()

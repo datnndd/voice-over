@@ -373,6 +373,12 @@ def role_menu(tts_type, langcode=None) -> List:
     if tts_type == tts.TTS_API:
         return ['No'] + params.get('ttsapi_voice_role', '').strip().split(',')
 
+    if tts_type == tts.VIENEU_TTS:
+        roles = str(params.get('vieneu_voice_roles', '') or '').strip()
+        preset_roles = [role.strip() for role in roles.split(',') if role.strip()]
+        custom_roles = [role for role in get_f5tts_role().keys() if role not in {'No', 'clone'}]
+        return ['No', 'clone'] + preset_roles + custom_roles
+
     if tts_type == tts.GPTSOVITS_TTS:
         return list(get_gptsovits_role().keys())
 

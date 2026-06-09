@@ -28,7 +28,10 @@ providers = [
     "deepgram-captions>=2.0",
     "deepgram-sdk>=3,<4",
     "gradio-client>=1.0",
+    "google-api-python-client>=2.160",
+    "google-auth>=2.36",
     "openai>=1.0",
+    "vieneu>=3.0.4",
     "zhconv>=1.4",
 ]
 local-ai = [

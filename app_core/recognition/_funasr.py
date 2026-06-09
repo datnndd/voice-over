@@ -27,7 +27,8 @@ class FunasrRecogn(BaseRecogn):
     def _exec(self) -> Union[List[SrtItem], None]:
         if self._exit():
             return
-        tools.check_and_down_ms(model_id='damo/punc_ct-transformer_zh-cn-common-vocab272727-pytorch',callback=self._process_callback)
+        if self.punctuate:
+            tools.check_and_down_ms(model_id='damo/punc_ct-transformer_zh-cn-common-vocab272727-pytorch',callback=self._process_callback)
         detect_language = _funasr_language_code(self.detect_language)
 
         if self.model_name == 'paraformer-zh' and detect_language not in ['zh', 'en']:
@@ -46,7 +47,8 @@ class FunasrRecogn(BaseRecogn):
         if self.model_name == 'paraformer-zh':
             tools.check_and_down_ms(model_id='iic/speech_seaco_paraformer_large_asr_nat-zh-cn-16k-common-vocab8404-pytorch',callback=self._process_callback)
             tools.check_and_down_ms(model_id='damo/speech_fsmn_vad_zh-cn-16k-common-pytorch',callback=self._process_callback)
-            tools.check_and_down_ms(model_id='damo/punc_ct-transformer_zh-cn-common-vocab272727-pytorch',callback=self._process_callback)
+            if self.punctuate:
+                tools.check_and_down_ms(model_id='damo/punc_ct-transformer_zh-cn-common-vocab272727-pytorch',callback=self._process_callback)
             tools.check_and_down_ms(model_id='damo/speech_campplus_sv_zh-cn_16k-common',callback=self._process_callback)
         else:
             tools.check_and_down_ms(model_id=self.model_name,callback=self._process_callback)
@@ -65,8 +67,8 @@ class FunasrRecogn(BaseRecogn):
             "is_cuda": self.is_cuda,
             "audio_file": self.audio_file,
             "max_speakers": self.max_speakers,
-            "cache_folder": self.cache_folder
-
+            "cache_folder": self.cache_folder,
+            "punctuate": self.punctuate
         }
         raws=self._new_process(callback=paraformer if self.model_name == 'paraformer-zh' else funasr_mlt,title=f'STT use {self.model_name}',is_cuda=self.is_cuda,kwargs=kwars)
         return raws

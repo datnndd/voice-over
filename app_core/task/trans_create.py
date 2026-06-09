@@ -93,33 +93,33 @@ class TransCreate(BaseTask):
             detect_language = self.cfg.detect_language
         self.cfg.detect_language = detect_language
 
-        # 存放分离后的无声mp4到临时文件夹
+        # 保留兼容字段，但新版输出不再分离无声视频。
         self.cfg.novoice_mp4 = f"{self.cfg.cache_folder}/novoice.mp4"
 
         # 原始语言字幕文件：输出文件夹
-        self.cfg.source_sub = f"{self.cfg.target_dir}/{self.cfg.source_language_code}.srt"
+        self.cfg.source_sub = f"{self.cfg.target_dir}/source.srt"
         # 原始语言音频文件：输出文件夹
         self.cfg.source_wav_output = f"{self.cfg.target_dir}/{self.cfg.source_language_code}.m4a"
         # 原始语言音频文件：临时文件夹
         self.cfg.source_wav = f"{self.cfg.cache_folder}/{self.cfg.source_language_code}.wav"
 
         # 目标语言字幕：输出文件夹
-        self.cfg.target_sub = f"{self.cfg.target_dir}/{self.cfg.target_language_code}.srt"
+        self.cfg.target_sub = f"{self.cfg.target_dir}/target.srt"
         # 配音后的目标音频文件：输出文件夹
-        self.cfg.target_wav_output = f"{self.cfg.target_dir}/{self.cfg.target_language_code}.m4a"
+        self.cfg.target_wav_output = f"{self.cfg.target_dir}/voice_target.m4a"
         # 配音后的目标音频文件：临时文件夹
         self.cfg.target_wav = f"{self.cfg.cache_folder}/target.wav"
 
-        # 最终需要输出的mp4视频
-        self.cfg.targetdir_mp4 = f"{self.cfg.target_dir}/{self.cfg.noextname}.mp4"
+        # 输出视频为原视频副本，不再和目标配音合成。
+        source_ext = self.cfg.ext or Path(str(self.cfg.name)).suffix.lstrip(".") or "mp4"
+        self.cfg.targetdir_mp4 = f"{self.cfg.target_dir}/video_renew.{source_ext}"
 
         # 如果配音角色不是No 则需要配音
         if self.cfg.voice_role and self.cfg.voice_role != 'No' and self.cfg.target_language_code:
             self.should_dubbing = True
 
-        # 如果不是 tiqu，则均需要合并视频音频字幕
-        if self.cfg.app_mode != 'tiqu' and (self.should_dubbing or self.cfg.subtitle_type > 0):
-            self.should_hebing = True
+        # 新版输出不再把配音和字幕合成进视频，只返回独立产物。
+        self.should_hebing = False
 
         # 是否需要翻译:存在目标语言代码并且不等于原始语言，则需要翻译
         if self.cfg.target_language_code and self.cfg.target_language_code != self.cfg.source_language_code:
@@ -127,7 +127,7 @@ class TransCreate(BaseTask):
 
         # 如果原语言和目标语言相等，并且存在配音角色，则替换配音
         if self.cfg.voice_role and self.cfg.voice_role != 'No' and self.cfg.source_language_code == self.cfg.target_language_code:
-            self.cfg.target_wav_output = f"{self.cfg.target_dir}/{self.cfg.target_language_code}-dubbing.m4a"
+            self.cfg.target_wav_output = f"{self.cfg.target_dir}/voice_target.m4a"
             self.cfg.target_wav = f"{self.cfg.cache_folder}/target-dubbing.wav"
             self.should_dubbing = True
 
@@ -224,14 +224,10 @@ class TransCreate(BaseTask):
                 shutil.copy2(raw_instrument, self.cfg.instrument)
             self.should_separate = True
 
-        # 将原始视频分离为无声视频
+        # 不再分离无声视频。视频输出只是原视频副本。
+        app_cfg.queue_novice[self.uuid] = 'end'
         if not self.is_audio_trans and self.cfg.app_mode != 'tiqu':
-            app_cfg.queue_novice[self.uuid] = 'ing'
-            if not self.is_copy_video:
-                self.signal(text=tr("Video needs transcoded and take a long time.."))
-            run_in_threadpool(self._split_novoice_byraw)
-        else:
-            app_cfg.queue_novice[self.uuid] = 'end'
+            self._copy_video_renew()
 
         # 需要人声背景声分离，并且不存在已分离好的文件
         if audio_stream_len > 0 and self.cfg.is_separate and (
@@ -333,7 +329,8 @@ class TransCreate(BaseTask):
             is_cuda=self.cfg.is_cuda,
             subtitle_type=self.cfg.subtitle_type,
             max_speakers=self.max_speakers,
-            llm_post=self.cfg.rephrase==1
+            llm_post=self.cfg.rephrase==1,
+            punctuate=self.cfg.stt_punctuate
         )
         if self._exit(): return
         if not raw_subtitles:
@@ -648,20 +645,16 @@ class TransCreate(BaseTask):
         if self.cfg.voice_autorate or self.cfg.video_autorate:
             self.signal(text=tr("Sound & video speed alignment stage"))
 
-        # 需要视频慢速，则判断无声视频是否已分离完毕
-        if self.cfg.video_autorate:
-            tools.is_novoice_mp4(self.cfg.novoice_mp4, self.uuid)
-        # 存在视频，则以视频长度为准
-        if tools.vail_file(self.cfg.novoice_mp4):
-            self.video_time = tools.get_video_duration(self.cfg.novoice_mp4)
+        # 新版输出不再改视频时长，因此禁用视频慢速，仅保留音频对齐。
+        should_videorate = False
 
         rate_inst = SpeedRate(
             queue_tts=self.queue_tts,
             uuid=self.uuid,
             should_audiorate=self.cfg.voice_autorate,
             # 视频是否需慢速，需要时对 novoice_mp4进行处理
-            should_videorate=self.cfg.video_autorate if not self.is_audio_trans else False,
-            novoice_mp4=self.cfg.novoice_mp4 if not self.is_audio_trans else None,
+            should_videorate=should_videorate,
+            novoice_mp4=None,
             # 原始总时长
             raw_total_time=self.video_time,
             target_audio=self.cfg.target_wav,
@@ -671,9 +664,7 @@ class TransCreate(BaseTask):
         )
         self.queue_tts = rate_inst.run()
 
-        # 慢速处理后，更新新视频总时长，用于音视频对齐
-        if tools.vail_file(self.cfg.novoice_mp4):
-            self.video_time = tools.get_video_duration(self.cfg.novoice_mp4)
+        # 视频不被改写，时长保持原视频时长。
 
         # 对齐字幕
         if self.cfg.voice_autorate or self.cfg.video_autorate or self.cfg.align_sub_audio:
@@ -728,22 +719,38 @@ class TransCreate(BaseTask):
                 logger.warning('仅提取模式时，清理中间文件失败，跳过')
             return self.set_end(True)
 
-        if self.is_audio_trans and tools.vail_file(self.cfg.target_wav):
-            try:
-                shutil.copy2(self.cfg.target_wav,
-                             f"{self.cfg.target_dir}/{self.cfg.target_language_code}-{self.cfg.noextname}.wav")
-            except shutil.SameFileError:
-                pass
-
-        try:
-            if self.cfg.only_out_mp4:
-                shutil.move(self.cfg.targetdir_mp4, Path(self.cfg.target_dir).parent / f'{self.cfg.noextname}.mp4')
-                shutil.rmtree(self.cfg.target_dir, ignore_errors=True)
-        except OSError as e:
-            logger.exception(f'仅输出mp4时清理临时文件移动视频位置出错，跳过 {e}', exc_info=True)
+        if tools.vail_file(self.cfg.target_wav):
+            self._copy_voice_target()
+        elif not self.should_dubbing and not self.is_audio_trans:
+            self._get_origin_audio(self.cfg.target_wav_output)
 
         self.set_end(True)
         logger.debug(f'[{self.cfg.name}视频翻译任务结束，总耗时]:{time.time()-self.cost_duration}s')
+
+    def _copy_video_renew(self) -> None:
+        if self._exit() or self.is_audio_trans or self.cfg.app_mode == 'tiqu':
+            return
+        try:
+            shutil.copy2(self.cfg.name, self.cfg.targetdir_mp4)
+            logger.debug(f'[Video-Renew] 原视频副本已生成: {self.cfg.targetdir_mp4}')
+        except shutil.SameFileError:
+            pass
+
+    def _copy_voice_target(self) -> None:
+        target_m4a = self.cfg.target_wav_output
+        try:
+            tools.runffmpeg([
+                "-y",
+                "-i",
+                self.cfg.target_wav,
+                "-ac", "2", "-b:a", "128k", "-c:a", "aac",
+                target_m4a,
+            ])
+            logger.debug(f'[Voice-Target] 目标配音已生成: {target_m4a}')
+        except Exception as e:
+            logger.exception(f'目标配音输出失败，尝试直接复制wav {e}', exc_info=True)
+            fallback = f"{Path(target_m4a).with_suffix('.wav').as_posix()}"
+            shutil.copy2(self.cfg.target_wav, fallback)
 
     # 从原始视频分离出 无声视频
     def _split_novoice_byraw(self):

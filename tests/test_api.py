@@ -25,7 +25,7 @@ def test_job_api_create_get_cancel_and_outputs(tmp_path):
         assert params["basename"] == "test.mp4"
         assert params["noextname"] == "test"
         assert params["ext"] == "mp4"
-        assert params["targetdir_mp4"].endswith("/test.mp4")
+        assert params["targetdir_mp4"].endswith("/video_renew.mp4")
         assert not params["targetdir_mp4"].endswith("/None.mp4")
 
         outputs = client.get(f"/jobs/{job_id}/outputs")
@@ -48,4 +48,21 @@ def test_providers_endpoint_returns_registry():
     assert "stt" in payload
     assert "tts" in payload
     assert "translators" in payload
+
+def test_upload_media_endpoint_saves_file(tmp_path):
+    repo = JobRepository(tmp_path / "jobs.db")
+    worker = JobWorker(repo)
+    app.state.service = JobService(repo, worker, tmp_path / "outputs", tmp_path / "uploads")
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/uploads/media",
+            files={"file": ("my video.mp4", b"video", "video/mp4")},
+        )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["filename"] == "my-video.mp4"
+    assert payload["size_bytes"] == 5
+    assert payload["path"].endswith("/my-video.mp4")
 

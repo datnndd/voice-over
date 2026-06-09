@@ -29,6 +29,18 @@ def test_voices_endpoint_returns_omnivoice_clone_roles():
     assert "No" in names
     assert "clone" in names
 
+def test_voices_endpoint_returns_vieneu_roles():
+    with TestClient(app) as client:
+        response = client.get("/voices", params={"tts_type": 32, "language": "vi"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["tts_type"] == 32
+    names = [voice["name"] for voice in payload["voices"]]
+    assert "No" in names
+    assert "clone" in names
+    assert "Ngoc Lan" in names
+
 
 def test_upload_clone_reference_adds_omnivoice_role():
     audio = b"RIFF0000WAVEfmt "

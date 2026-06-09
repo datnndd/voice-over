@@ -138,14 +138,14 @@ class DeepgramRecogn(BaseRecogn):
         model_name = _deepgram_model_name(self.model_name)
         language = _deepgram_language_code(self.detect_language)
         _validate_deepgram_language(model_name, language)
-        self.signal(text=f'Deepgram request: model={model_name}, language={language or "auto-detect"}, diarize={diarize}')
-        logger.info(f'Deepgram request: model={model_name}, language={language or "auto-detect"}, diarize={diarize}, audio={Path(self.audio_file).name}, bytes={len(buffer_data)}')
+        self.signal(text=f'Deepgram request: model={model_name}, language={language or "auto-detect"}, diarize={diarize}, punctuate={self.punctuate}')
+        logger.info(f'Deepgram request: model={model_name}, language={language or "auto-detect"}, diarize={diarize}, punctuate={self.punctuate}, audio={Path(self.audio_file).name}, bytes={len(buffer_data)}')
         options = PrerecordedOptions(
             model=model_name,
             detect_language=language is None,
             language=language,
-            smart_format=True,
-            punctuate=True,
+            smart_format=self.punctuate,
+            punctuate=self.punctuate,
             paragraphs=True,
             utterances=True,
             diarize=diarize,

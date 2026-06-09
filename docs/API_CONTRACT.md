@@ -11,6 +11,8 @@ This contract is the stable surface for the frontend. Backend internals and `app
 - Timestamps: SQLite UTC strings in `YYYY-MM-DD HH:MM:SS` format.
 - Secrets: never sent through API payloads; provider secrets come from `.env` / environment.
 - Paths: response paths are absolute filesystem paths on the backend machine.
+- Processing outputs default to `C:\Users\ddat2\Downloads` unless `VOICE_OVER_OUTPUTS` overrides it.
+- When Google Drive upload is enabled, successful job outputs are uploaded to Drive and local processing files are deleted after upload succeeds.
 - Unknown provider/runtime fields must be treated as read-only metadata by frontend.
 
 ## Job Types
@@ -36,6 +38,28 @@ This contract is the stable surface for the frontend. Backend internals and `app
 
 Creates a queued job. Long processing is asynchronous.
 
+## `POST /uploads/media`
+
+Uploads source media from the browser/local client before creating a job. Use the returned `path` as `params.name` in `POST /jobs`.
+
+### Request
+
+Multipart form data:
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `file` | file | yes | Source media file, e.g. `.mp4`, `.mov`, `.mkv`. |
+
+### Response `200`
+
+```json
+{
+  "filename": "input.mp4",
+  "path": "C:/Users/ddat2/Downloads/voice-over/data/uploads/.../input.mp4",
+  "size_bytes": 123456
+}
+```
+
 ### Request
 
 ```json
@@ -57,7 +81,9 @@ Creates a queued job. Long processing is asynchronous.
     "app_mode": "biaozhun",
     "subtitle_type": 0,
     "output_srt": 0,
-    "recogn2pass": false
+    "recogn2pass": false,
+    "fix_punc": false,
+    "stt_punctuate": true
   }
 }
 ```
@@ -82,6 +108,8 @@ Creates a queued job. Long processing is asynchronous.
 | `subtitle_type` | integer | request | Subtitle embed mode. |
 | `output_srt` | integer | request | Subtitle output mode. |
 | `recogn2pass` | boolean | request | Re-recognize dubbed audio. |
+| `fix_punc` | boolean | request | Restore punctuation after STT for zh/en. |
+| `stt_punctuate` | boolean | request | Enable provider-native punctuation when STT supports it. |
 | `enable_diariz` | boolean | request | Enable speaker diarization. |
 | `nums_diariz` | integer | request | Speaker count hint, `0` means auto/no limit. |
 | `speaker_clone_mode` | string | request | `off` for single voice, `auto` for diarize + auto OmniVoice refs. |
@@ -93,7 +121,14 @@ Creates a queued job. Long processing is asynchronous.
 | `basename` | string | response | Source filename. |
 | `noextname` | string | response | Source filename stem. |
 | `ext` | string | response | Source extension without dot. |
-| `targetdir_mp4` | string | response | Final mp4 path for video jobs. |
+| `targetdir_mp4` | string | response | Copied source video path, named `video_renew.<ext>`, for video jobs. |
+
+`video_translate` outputs are independent assets. The backend does not mux translated voice into the returned video. Expected successful outputs are:
+
+- `source.srt`: source-language transcript.
+- `target.srt`: translated subtitle.
+- `voice_target.m4a`: target-language voice output.
+- `video_renew.<ext>`: direct copy of the source video.
 
 Extra fields are accepted as runtime pass-through for `app_core`, but frontend should rely only on stable fields above.
 
@@ -106,7 +141,7 @@ Extra fields are accepted as runtime pass-through for `app_core`, but frontend s
   "status": "queued",
   "params": {},
   "error": null,
-  "target_dir": "C:/.../outputs/fffb497b-c8c1-4195-b5d2-a187bc9a9960",
+  "target_dir": "C:/Users/ddat2/Downloads/fffb497b-c8c1-4195-b5d2-a187bc9a9960",
   "created_at": "2026-06-07 10:43:52",
   "updated_at": "2026-06-07 10:43:52"
 }
@@ -125,7 +160,7 @@ Returns job state plus ordered events.
   "status": "succeeded",
   "params": {},
   "error": null,
-  "target_dir": "C:/.../outputs/fffb497b-c8c1-4195-b5d2-a187bc9a9960",
+  "target_dir": "C:/Users/ddat2/Downloads/fffb497b-c8c1-4195-b5d2-a187bc9a9960",
   "created_at": "2026-06-07 10:43:52",
   "updated_at": "2026-06-07 10:44:25",
   "events": [
@@ -165,15 +200,60 @@ Returns structured files found under job `target_dir`.
   "job_id": "fffb497b-c8c1-4195-b5d2-a187bc9a9960",
   "outputs": [
     {
-      "path": "C:/.../outputs/.../test.mp4",
-      "filename": "test.mp4",
+      "path": "C:/Users/ddat2/Downloads/.../video_renew.mp4",
+      "filename": "video_renew.mp4",
       "extension": ".mp4",
       "kind": "video",
-      "size_bytes": 123456
+      "size_bytes": 123456,
+      "storage": "google_drive",
+      "drive_file_id": "1abc...",
+      "drive_web_view_link": "https://drive.google.com/file/d/1abc.../view"
+    },
+    {
+      "path": "C:/Users/ddat2/Downloads/.../voice_target.m4a",
+      "filename": "voice_target.m4a",
+      "extension": ".m4a",
+      "kind": "audio",
+      "size_bytes": 123456,
+      "storage": "google_drive",
+      "drive_file_id": "1def...",
+      "drive_web_view_link": "https://drive.google.com/file/d/1def.../view"
+    },
+    {
+      "path": "C:/Users/ddat2/Downloads/.../source.srt",
+      "filename": "source.srt",
+      "extension": ".srt",
+      "kind": "subtitle",
+      "size_bytes": 1234,
+      "storage": "google_drive",
+      "drive_file_id": "1ghi...",
+      "drive_web_view_link": "https://drive.google.com/file/d/1ghi.../view"
+    },
+    {
+      "path": "C:/Users/ddat2/Downloads/.../target.srt",
+      "filename": "target.srt",
+      "extension": ".srt",
+      "kind": "subtitle",
+      "size_bytes": 1234,
+      "storage": "google_drive",
+      "drive_file_id": "1jkl...",
+      "drive_web_view_link": "https://drive.google.com/file/d/1jkl.../view"
     }
   ]
 }
 ```
+
+If Google Drive upload is disabled or the job has not been cleaned up yet, `storage` is `local` and `path` is the local filesystem path.
+
+## Google Drive Cleanup
+
+Enable Drive upload with:
+
+- `VOICE_OVER_GOOGLE_DRIVE_ENABLED=1`
+- `VOICE_OVER_GOOGLE_DRIVE_FOLDER_ID=<folder id>`
+- one of `VOICE_OVER_GOOGLE_DRIVE_CREDENTIALS_FILE` or `VOICE_OVER_GOOGLE_DRIVE_CREDENTIALS_JSON`
+
+The backend uploads all generated output files after a successful job. It deletes the job output directory and API-uploaded input file only after all uploads succeed. If Drive upload fails, the job fails and local files remain for recovery.
 
 `kind` must be one of:
 
@@ -202,10 +282,23 @@ Lists selectable providers after allow/deny filtering.
       "config_mode": "env"
     }
   ],
-  "tts": [],
+  "tts": [
+    {
+      "id": 32,
+      "name": "VieNeu-TTS",
+      "kind": "tts",
+      "runtime": "local",
+      "key_name": null,
+      "env_var": null,
+      "configured": true,
+      "config_mode": "none"
+    }
+  ],
   "translators": []
 }
 ```
+
+VieNeu-TTS uses `tts_type: 32`. It requires the optional Python package `vieneu` at runtime. Optional settings are `VOICE_OVER_VIENEU_MODE`, `VOICE_OVER_VIENEU_API_BASE`, `VOICE_OVER_VIENEU_MODEL_NAME`, and `VOICE_OVER_VIENEU_VOICE_ROLES`.
 
 ## Multi-Speaker Auto Clone
 
@@ -234,7 +327,7 @@ Backend behavior:
 
 ## `POST /voices/clone-refs`
 
-Uploads a reference audio sample for clone-capable local TTS providers such as OmniVoice. The backend stores the file under `f5-tts/`, registers it in runtime voice config, and returns the new voice role name.
+Uploads a reference audio sample for clone-capable local TTS providers such as OmniVoice and VieNeu-TTS. The backend stores the file under `f5-tts/`, registers it in runtime voice config, and returns the new voice role name.
 
 ### Request
 
@@ -257,8 +350,8 @@ Multipart form data:
 
 Frontend rule:
 
-- Show this upload UI when `tts_type=2` OmniVoice is selected.
-- After upload, refresh `/voices?tts_type=2&language=...` and select returned `name` as `voice_role`.
+- Show this upload UI when `tts_type=2` OmniVoice or `tts_type=32` VieNeu-TTS is selected.
+- After upload, refresh `/voices?tts_type=2&language=...` or `/voices?tts_type=32&language=...` and select returned `name` as `voice_role`.
 - Do not use `voice_role=clone` unless the core pipeline supplies per-line source references automatically.
 
 ## `GET /voices`

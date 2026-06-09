@@ -37,13 +37,15 @@ AZURE_TTS = 28
 AI302_TTS = 29
 CAMB_TTS = 30
 TTS_API = 31
+VIENEU_TTS = 32
 
-SUPPORT_CLONE = [OMNIVOICE_TTS]
+SUPPORT_CLONE = [OMNIVOICE_TTS, VIENEU_TTS]
 CHANGE_BY_LANGUAGE = [AZURE_TTS]
 
 _ID_NAME_DICT = {
     OMNIVOICE_TTS: ChannelProvider(f"OmniVoice({tr('Local')}API)", "._omnivoice", key_name="omnivoice_url", win="omnivoice"),
     AZURE_TTS: ChannelProvider("Azure-TTS", "._azuretts", key_name="azure_speech_key", win="azuretts"),
+    VIENEU_TTS: ChannelProvider("VieNeu-TTS", "._vieneu", win="vieneu"),
 }
 _ID_NAME_DICT = dict(sorted(_ID_NAME_DICT.items(), key=lambda item: item[0]))
 TTS_NAME_LIST = [it.name for it in _ID_NAME_DICT.values()]

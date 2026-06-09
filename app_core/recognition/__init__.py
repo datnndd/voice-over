@@ -61,7 +61,8 @@ def run(*,
         subtitle_type=0,
         max_speakers=-1,
         llm_post=False,
-        recogn2pass=False
+        recogn2pass=False,
+        punctuate=True
         ) -> Union[List[SrtItem], None]:
     if app_cfg.exit_soft or (uuid and uuid in app_cfg.stoped_uuid_set):
         return
@@ -77,6 +78,7 @@ def run(*,
         "max_speakers": max_speakers,
         "llm_post": llm_post,
         "recogn2pass": recogn2pass,
+        "punctuate": punctuate,
     }
     _cls: Union[Type[BaseRecogn], None] = get_class(recogn_type, "recognition", _ID_NAME_DICT)
     if not _cls:

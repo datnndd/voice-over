@@ -227,6 +227,8 @@ type FormState = {
   nums_diariz: number
   speaker_ref_min_seconds: number
   speaker_ref_max_seconds: number
+  fix_punc: boolean
+  stt_punctuate: boolean
 }
 
 const initialForm: FormState = {
@@ -248,6 +250,8 @@ const initialForm: FormState = {
   nums_diariz: 0,
   speaker_ref_min_seconds: 10,
   speaker_ref_max_seconds: 15,
+  fix_punc: false,
+  stt_punctuate: true,
 }
 
 function readinessKey(kind: string, id: number | null) {
@@ -301,6 +305,8 @@ function buildParams(form: FormState): JobParams {
     subtitle_type: 0,
     output_srt: 0,
     recogn2pass: false,
+    fix_punc: form.fix_punc,
+    stt_punctuate: form.stt_punctuate,
     is_separate: form.is_separate,
     embed_bgm: form.is_separate ? form.embed_bgm : false,
     uvr_models: form.uvr_models,
@@ -365,9 +371,9 @@ function VoiceSelect({
   return (
     <label className="field full">
       <span>Voice role</span>
-      <select value={value} onChange={(event) => onChange(event.target.value)}>
+      <select value={value || 'No'} onChange={(event) => onChange(event.target.value)}>
         {voices.map((voice) => (
-          <option key={voice.value} value={voice.value}>
+          <option key={voice.value || voice.name} value={voice.value || voice.name || 'No'}>
             {voice.name}{voice.gender ? ` ? ${voice.gender}` : ''}
           </option>
         ))}
@@ -517,7 +523,9 @@ function JobProgress({ job, outputs, onCancel }: { job: JobDetail | null; output
             <span className={`kind ${output.kind}`}>{output.kind}</span>
             <div>
               <strong>{output.filename}</strong>
-              <small>{output.path}</small>
+              {output.storage === 'google_drive' && output.drive_web_view_link ? (
+                <small><a href={output.drive_web_view_link} target="_blank" rel="noreferrer">Google Drive</a></small>
+              ) : <small>{output.path}</small>}
             </div>
             <em>{formatBytes(output.size_bytes)}</em>
           </div>
@@ -543,6 +551,8 @@ function App() {
   const [job, setJob] = useState<JobDetail | null>(null)
   const [outputs, setOutputs] = useState<OutputFile[]>([])
   const [voices, setVoices] = useState<VoiceInfo[]>([])
+  const [mediaFile, setMediaFile] = useState<File | null>(null)
+  const [uploadingMedia, setUploadingMedia] = useState(false)
   const [cloneFile, setCloneFile] = useState<File | null>(null)
   const [cloneRefText, setCloneRefText] = useState('')
   const [uploadingClone, setUploadingClone] = useState(false)
@@ -557,7 +567,7 @@ function App() {
   const sourceLanguageCode = resolveLanguageCode(form.source_language_choice, form.source_custom_code)
   const targetLanguageCode = resolveLanguageCode(form.target_language_choice, form.target_custom_code)
   const languagesReady = Boolean(sourceLanguageCode && targetLanguageCode)
-  const canSubmit = Boolean(form.name.trim()) && languagesReady && selectedSttReady && selectedTtsReady && selectedTranslatorReady && !loading
+  const canSubmit = Boolean(form.name.trim() || mediaFile) && languagesReady && selectedSttReady && selectedTtsReady && selectedTranslatorReady && !loading && !uploadingMedia
 
   async function refreshMetadata() {
     const [providerPayload, checkPayload] = await Promise.all([api.getProviders(), api.getRuntimeChecks()])
@@ -601,10 +611,10 @@ function App() {
     let active = true
     void api.getVoices(form.tts_type, targetLanguageCode).then((payload) => {
       if (!active) return
-      setVoices(payload.voices)
-      if (payload.voices.length > 0 && !payload.voices.some((voice) => voice.value === form.voice_role)) {
-        const preferred = payload.voices.find((voice) => voice.value === 'HoaiMy(Female)') ?? payload.voices.find((voice) => voice.value !== 'No') ?? payload.voices[0]
-        setForm((current) => ({ ...current, voice_role: preferred.value }))
+      setVoices(payload.voices.map((voice) => ({ ...voice, value: voice.value || voice.name || 'No' })))
+      if (payload.voices.length > 0 && !payload.voices.some((voice) => (voice.value || voice.name || 'No') === form.voice_role)) {
+        const preferred = payload.voices.find((voice) => (voice.value || voice.name) === 'HoaiMy(Female)') ?? payload.voices.find((voice) => (voice.value || voice.name || 'No') !== 'No') ?? payload.voices[0]
+        setForm((current) => ({ ...current, voice_role: preferred.value || preferred.name || 'No' }))
       }
     }).catch((caught: unknown) => {
       if (!active) return
@@ -623,12 +633,21 @@ function App() {
       if (safeForm.source_language_choice !== form.source_language_choice) {
         setForm(safeForm)
       }
-      const created = await api.createJob({ type: 'video_translate', params: buildParams(safeForm) })
+      let jobForm = safeForm
+      if (mediaFile) {
+        setUploadingMedia(true)
+        const uploaded = await api.uploadMedia(mediaFile)
+        jobForm = { ...safeForm, name: uploaded.path }
+        setForm(jobForm)
+        setUploadingMedia(false)
+      }
+      const created = await api.createJob({ type: 'video_translate', params: buildParams(jobForm) })
       const detail = await api.getJob(created.id)
       setJob(detail)
       setOutputs([])
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught))
+      setUploadingMedia(false)
     } finally {
       setLoading(false)
     }
@@ -762,9 +781,13 @@ function App() {
                 <span>02</span>
                 <div>
                   <strong>Input và ngôn ngữ</strong>
-                  <small>Path file local, source language, target language.</small>
+                  <small>Upload video hoặc dùng path local, source language, target language.</small>
                 </div>
               </div>
+              <label className="field full">
+                <span>Upload video</span>
+                <input type="file" accept="video/*,.mp4,.mov,.mkv,.webm" onChange={(event) => setMediaFile(event.target.files?.[0] ?? null)} />
+              </label>
               <label className="field full">
                 <span>Video path</span>
                 <input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
@@ -796,6 +819,14 @@ function App() {
                   <small>STT → translate → TTS.</small>
                 </div>
               </div>
+              <label className="check-field full">
+                <input type="checkbox" checked={form.stt_punctuate} onChange={(event) => setForm({ ...form, stt_punctuate: event.target.checked })} />
+                <span>{'Bật dấu câu từ STT provider (.,;:?! — nếu provider hỗ trợ)'}</span>
+              </label>
+              <label className="check-field full">
+                <input type="checkbox" checked={form.fix_punc} onChange={(event) => setForm({ ...form, fix_punc: event.target.checked })} />
+                <span>{'Khôi phục dấu câu sau STT (chỉ zh/en)'}</span>
+              </label>
               <div className="field-grid">
                 <ProviderSelect label="STT" value={form.recogn_type} providers={providers?.stt ?? []} checks={checks} onChange={(recogn_type) => {
                 const model_name = defaultSttModel(recogn_type)
@@ -889,9 +920,9 @@ function App() {
             </div>
             <div className="submit-bar">
               <button className="primary" type="button" disabled={!canSubmit} onClick={submitJob}>
-                {loading ? 'Đang xử lý...' : 'Tạo job'}
+                {uploadingMedia ? 'Đang upload video...' : loading ? 'Đang xử lý...' : 'Tạo job'}
               </button>
-              {!canSubmit && <small className="hint">Điền video path và chọn provider ready để chạy.</small>}
+              {!canSubmit && <small className="hint">Upload video hoặc điền video path, rồi chọn provider ready để chạy.</small>}
             </div>
           </section>
 

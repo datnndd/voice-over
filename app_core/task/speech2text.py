@@ -133,7 +133,8 @@ class SpeechToText(BaseTask):
             is_cuda=self.cfg.is_cuda,
             subtitle_type=0,
             max_speakers=self.max_speakers,
-            llm_post=self.cfg.rephrase == 1
+            llm_post=self.cfg.rephrase == 1,
+            punctuate=self.cfg.stt_punctuate
         )
         if not raw_subtitles or len(raw_subtitles) < 1:
             raise SpeechToTextError(self.cfg.basename + tr('recogn result is empty'))
