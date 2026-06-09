@@ -62,6 +62,9 @@ def run_stt(params: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def run_tts(params: Dict[str, Any]) -> Dict[str, Any]:
+    allowed_fields = set(TaskCfgTTS.__dataclass_fields__)
+    tts_params = {key: value for key, value in params.items() if key in allowed_fields}
+
     def factory(values: Dict[str, Any]) -> DubbingSrt:
         return DubbingSrt(cfg=TaskCfgTTS(**values), out_ext="wav")
 
@@ -71,7 +74,7 @@ def run_tts(params: Dict[str, Any]) -> Dict[str, Any]:
         task.align()
         task.task_done()
 
-    return _run_task(params, factory, runner)
+    return _run_task(tts_params, factory, runner)
 
 
 def run_subtitle_translate(params: Dict[str, Any]) -> Dict[str, Any]:

@@ -1,3 +1,0 @@
-file 'silence_gap_0.wav'
-file 'dubb-0-55da2500b7d14c17f6291f01ca63e6ed.wav'
-file 'silence_tail_end.wav'

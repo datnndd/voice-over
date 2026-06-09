@@ -18,6 +18,10 @@ def test_vieneu_tts_uses_sdk_infer_and_save(tmp_path, monkeypatch):
             calls["infer"] = kwargs
             return b"audio"
 
+        def get_preset_voice(self, role):
+            calls["role"] = role
+            return {"codes": [1, 2, 3], "text": "ref"}
+
         def save(self, audio, output):
             calls["save"] = {"audio": audio, "output": output}
             Path(output).write_bytes(b"wav")
@@ -30,7 +34,7 @@ def test_vieneu_tts_uses_sdk_infer_and_save(tmp_path, monkeypatch):
 
     output = tmp_path / "line.wav"
     tts = VieNeuTTS(
-        queue_tts=[{"text": "xin chao", "filename": output.as_posix(), "role": "Ngoc Lan"}],
+        queue_tts=[{"text": "xin chao", "filename": output.as_posix(), "role": "Ngoc"}],
         language="vi",
         uuid="test-vieneu",
         tts_type=32,
@@ -40,5 +44,6 @@ def test_vieneu_tts_uses_sdk_infer_and_save(tmp_path, monkeypatch):
     tts.run()
 
     assert output.read_bytes() == b"converted"
-    assert calls["infer"] == {"text": "xin chao", "voice": "Ngoc Lan"}
+    assert calls["role"] == "Ngoc"
+    assert calls["infer"] == {"text": "xin chao", "voice": {"codes": [1, 2, 3], "text": "ref"}}
     assert calls["closed"] is True

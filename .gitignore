@@ -26,5 +26,7 @@ __pycache__/
 data/
 outputs/
 logs/
+tmp/
+models/
 
 .env

@@ -3,10 +3,12 @@ import './App.css'
 import { api, type JobDetail, type JobParams, type OutputFile, type ProviderInfo, type ProviderList, type RuntimeCheck, type VoiceInfo } from './api'
 
 type JobPreset = 'hosted' | 'local-qwen' | 'local-funasr'
+type StudioMode = 'video_translate' | 'srt_to_audio'
 type WorkflowMode = 'single' | 'multi-speaker'
 type LanguageChoice = string
 
 type SelectOption = { value: string; label: string }
+const cloneCapableTtsTypes = new Set([2, 32])
 
 const languageOptions: SelectOption[] = [
   { value: 'en', label: 'English - en' },
@@ -476,6 +478,75 @@ function ProviderBoard({ providers, checks }: { providers: ProviderList | null; 
   )
 }
 
+function buildSrtAudioParams(form: FormState): JobParams {
+  const targetLanguageCode = resolveLanguageCode(form.target_language_choice, form.target_custom_code)
+  return {
+    name: form.name.trim(),
+    target_language: targetLanguageCode,
+    target_language_code: targetLanguageCode,
+    tts_type: Number(form.tts_type),
+    voice_role: form.voice_role.trim(),
+    voice_autorate: false,
+    remove_silent_mid: false,
+    align_sub_audio: false,
+  }
+}
+
+function CloneVoiceLibrary({
+  providers,
+  selectedTtsType,
+  cloneFile,
+  cloneRefText,
+  uploadingClone,
+  onTtsTypeChange,
+  onFileChange,
+  onRefTextChange,
+  onUpload,
+}: {
+  providers: ProviderInfo[]
+  selectedTtsType: number
+  cloneFile: File | null
+  cloneRefText: string
+  uploadingClone: boolean
+  onTtsTypeChange: (ttsType: number) => void
+  onFileChange: (file: File | null) => void
+  onRefTextChange: (text: string) => void
+  onUpload: () => void
+}) {
+  const cloneProviders = providers.filter((provider) => cloneCapableTtsTypes.has(provider.id))
+  return (
+    <section className="panel" id="voice-library">
+      <div className="panel-title">
+        <p>Voice library</p>
+        <span>clone-capable TTS</span>
+      </div>
+      <div className="clone-box">
+        <div>
+          <strong>{'Tạo giọng clone'}</strong>
+          <small>{'Upload audio mẫu một lần. Giọng mới sẽ nằm trong Voice role để chọn ở Single voice.'}</small>
+        </div>
+        <label className="field full">
+          <span>Clone model</span>
+          <select value={selectedTtsType} onChange={(event) => onTtsTypeChange(Number(event.target.value))}>
+            {cloneProviders.map((provider) => <option key={provider.id} value={provider.id}>{provider.name}</option>)}
+          </select>
+        </label>
+        <label className="field full">
+          <span>Reference audio</span>
+          <input type="file" accept="audio/*,.wav,.mp3,.m4a,.flac,.ogg" onChange={(event) => onFileChange(event.target.files?.[0] ?? null)} />
+        </label>
+        <label className="field full">
+          <span>Reference text</span>
+          <input value={cloneRefText} placeholder={'Câu nói trong audio mẫu'} onChange={(event) => onRefTextChange(event.target.value)} />
+        </label>
+        <button className="secondary" type="button" disabled={!cloneFile || !cloneRefText.trim() || uploadingClone || cloneProviders.length === 0} onClick={onUpload}>
+          {uploadingClone ? 'Đang lưu giọng...' : 'Lưu voice clone'}
+        </button>
+      </div>
+    </section>
+  )
+}
+
 function JobProgress({ job, outputs, onCancel }: { job: JobDetail | null; outputs: OutputFile[]; onCancel: () => void }) {
   if (!job) {
     return (
@@ -545,10 +616,12 @@ function JobProgress({ job, outputs, onCancel }: { job: JobDetail | null; output
 function App() {
   const [providers, setProviders] = useState<ProviderList | null>(null)
   const [checks, setChecks] = useState<RuntimeCheck[]>([])
+  const [studioMode, setStudioMode] = useState<StudioMode>('video_translate')
   const [form, setForm] = useState<FormState>(initialForm)
   const [job, setJob] = useState<JobDetail | null>(null)
   const [outputs, setOutputs] = useState<OutputFile[]>([])
   const [voices, setVoices] = useState<VoiceInfo[]>([])
+  const [cloneTtsType, setCloneTtsType] = useState(2)
   const [cloneFile, setCloneFile] = useState<File | null>(null)
   const [cloneRefText, setCloneRefText] = useState('')
   const [uploadingClone, setUploadingClone] = useState(false)
@@ -562,8 +635,13 @@ function App() {
   const sourceOptions = getSourceLanguageOptions(form.recogn_type, form.model_name)
   const sourceLanguageCode = resolveLanguageCode(form.source_language_choice, form.source_custom_code)
   const targetLanguageCode = resolveLanguageCode(form.target_language_choice, form.target_custom_code)
+  const inputPath = form.name.trim()
+  const validSrtInput = /\.(srt|txt)$/i.test(inputPath)
   const languagesReady = Boolean(sourceLanguageCode && targetLanguageCode)
-  const canSubmit = Boolean(form.name.trim()) && languagesReady && selectedSttReady && selectedTtsReady && selectedTranslatorReady && !loading
+  const providerReady = studioMode === 'srt_to_audio' ? selectedTtsReady : selectedSttReady && selectedTtsReady && selectedTranslatorReady
+  const languageReady = studioMode === 'srt_to_audio' ? Boolean(targetLanguageCode) : languagesReady
+  const inputReady = studioMode === 'srt_to_audio' ? validSrtInput : Boolean(inputPath)
+  const canSubmit = inputReady && languageReady && providerReady && !loading
 
   async function refreshMetadata() {
     const [providerPayload, checkPayload] = await Promise.all([api.getProviders(), api.getRuntimeChecks()])
@@ -629,7 +707,9 @@ function App() {
       if (safeForm.source_language_choice !== form.source_language_choice) {
         setForm(safeForm)
       }
-      const created = await api.createJob({ type: 'video_translate', params: buildParams(safeForm) })
+      const created = studioMode === 'srt_to_audio'
+        ? await api.createJob({ type: 'tts', params: buildSrtAudioParams(safeForm) })
+        : await api.createJob({ type: 'video_translate', params: buildParams(safeForm) })
       const detail = await api.getJob(created.id)
       setJob(detail)
       setOutputs([])
@@ -659,9 +739,9 @@ function App() {
     setError(null)
     try {
       const uploaded = await api.uploadCloneReference(cloneFile, cloneRefText)
-      const payload = await api.getVoices(form.tts_type, targetLanguageCode)
-      setVoices(payload.voices)
-      setForm((current) => ({ ...current, voice_role: uploaded.name }))
+      const payload = await api.getVoices(cloneTtsType, targetLanguageCode)
+      setVoices(payload.voices.map((voice) => ({ ...voice, value: voice.value || voice.name || 'No' })))
+      setForm((current) => ({ ...current, workflow_mode: 'single', tts_type: cloneTtsType, voice_role: uploaded.name }))
       setCloneFile(null)
       setCloneRefText('')
     } catch (caught) {
@@ -688,6 +768,7 @@ function App() {
         <nav className="nav-list">
           <a href="#overview">Tổng quan</a>
           <a href="#create-job">Tạo job</a>
+          <a href="#voice-library">Voice library</a>
           <a href="#providers">Provider</a>
           <a href="#progress">Tiến trình</a>
         </nav>
@@ -714,7 +795,7 @@ function App() {
           </div>
           <div className="stat-card">
             <span>Workflow</span>
-            <strong>{form.workflow_mode === 'multi-speaker' ? 'Auto clone' : 'Single voice'}</strong>
+            <strong>{studioMode === 'srt_to_audio' ? 'SRT to audio' : form.workflow_mode === 'multi-speaker' ? 'Auto clone' : 'Single voice'}</strong>
           </div>
           <div className="stat-card">
             <span>Job status</span>
@@ -728,7 +809,7 @@ function App() {
           <section className="panel form-panel" id="create-job">
             <div className="panel-title">
               <div>
-                <p>Tạo video_translate job</p>
+                <p>{studioMode === 'srt_to_audio' ? 'Tạo audio từ SRT' : 'Tạo video_translate job'}</p>
                 <span>Không auth · local single-user</span>
               </div>
             </div>
@@ -738,9 +819,18 @@ function App() {
                 <span>01</span>
                 <div>
                   <strong>Chọn chế độ</strong>
-                  <small>Một giọng đọc hoặc tự clone theo speaker.</small>
+                  <small>Video pipeline hoặc tạo audio trực tiếp từ SRT.</small>
                 </div>
               </div>
+              <div className="preset-row">
+                <button type="button" className={studioMode === 'video_translate' ? 'preset active' : 'preset'} onClick={() => setStudioMode('video_translate')}>
+                  Video translate
+                </button>
+                <button type="button" className={studioMode === 'srt_to_audio' ? 'preset active' : 'preset'} onClick={() => setStudioMode('srt_to_audio')}>
+                  SRT → audio
+                </button>
+              </div>
+              {studioMode === 'video_translate' && <>
               <div className="preset-row">
                 <button type="button" className={form.workflow_mode === 'single' ? 'preset active' : 'preset'} onClick={() => setForm({ ...form, workflow_mode: 'single' })}>
                   {'1 gi\u1ecdng \u0111\u1ecdc'}
@@ -761,6 +851,7 @@ function App() {
                   </button>
                 ))}
               </div>
+              </>}
             </div>
 
             <div className="form-section">
@@ -768,24 +859,24 @@ function App() {
                 <span>02</span>
                 <div>
                   <strong>Input và ngôn ngữ</strong>
-                  <small>Path file local, source language, target language.</small>
+                  <small>{studioMode === 'srt_to_audio' ? 'Path file SRT local và ngôn ngữ audio.' : 'Path file local, source language, target language.'}</small>
                 </div>
               </div>
               <label className="field full">
-                <span>Video path</span>
-                <input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
+                <span>{studioMode === 'srt_to_audio' ? 'SRT path' : 'Video path'}</span>
+                <input value={form.name} placeholder={studioMode === 'srt_to_audio' ? 'C:/Users/ddat2/Downloads/script.srt' : 'C:/Users/ddat2/Downloads/video.mp4'} onChange={(event) => setForm({ ...form, name: event.target.value })} />
               </label>
               <div className="field-grid">
-                <LanguageSelect
+                {studioMode === 'video_translate' && <LanguageSelect
                   label="Source"
                   value={form.source_language_choice}
                   customValue={form.source_custom_code}
                   options={sourceOptions}
                   onValueChange={(source_language_choice) => setForm({ ...form, source_language_choice })}
                   onCustomChange={(source_custom_code) => setForm({ ...form, source_custom_code })}
-                />
+                />}
                 <LanguageSelect
-                  label="Target"
+                  label={studioMode === 'srt_to_audio' ? 'Audio language' : 'Target'}
                   value={form.target_language_choice}
                   customValue={form.target_custom_code}
                   onValueChange={(target_language_choice) => setForm({ ...form, target_language_choice })}
@@ -799,18 +890,21 @@ function App() {
                 <span>03</span>
                 <div>
                   <strong>Provider pipeline</strong>
-                  <small>STT → translate → TTS.</small>
+                  <small>{studioMode === 'srt_to_audio' ? 'Chỉ dùng TTS provider.' : 'STT → translate → TTS.'}</small>
                 </div>
               </div>
-              <label className="check-field full">
-                <input type="checkbox" checked={form.stt_punctuate} onChange={(event) => setForm({ ...form, stt_punctuate: event.target.checked })} />
-                <span>{'Bật dấu câu từ STT provider (.,;:?! — nếu provider hỗ trợ)'}</span>
-              </label>
-              <label className="check-field full">
-                <input type="checkbox" checked={form.fix_punc} onChange={(event) => setForm({ ...form, fix_punc: event.target.checked })} />
-                <span>{'Khôi phục dấu câu sau STT (chỉ zh/en)'}</span>
-              </label>
+              {studioMode === 'video_translate' && <>
+                <label className="check-field full">
+                  <input type="checkbox" checked={form.stt_punctuate} onChange={(event) => setForm({ ...form, stt_punctuate: event.target.checked })} />
+                  <span>{'Bật dấu câu từ STT provider (.,;:?! — nếu provider hỗ trợ)'}</span>
+                </label>
+                <label className="check-field full">
+                  <input type="checkbox" checked={form.fix_punc} onChange={(event) => setForm({ ...form, fix_punc: event.target.checked })} />
+                  <span>{'Khôi phục dấu câu sau STT (chỉ zh/en)'}</span>
+                </label>
+              </>}
               <div className="field-grid">
+                {studioMode === 'video_translate' && <>
                 <ProviderSelect label="STT" value={form.recogn_type} providers={providers?.stt ?? []} checks={checks} onChange={(recogn_type) => {
                 const model_name = defaultSttModel(recogn_type)
                 setForm(formWithValidSource(form, { recogn_type, model_name }))
@@ -819,6 +913,7 @@ function App() {
                 setForm(formWithValidSource(form, { model_name }))
               }} />
                 <ProviderSelect label="Translator" value={form.translate_type} providers={providers?.translators ?? []} checks={checks} onChange={(translate_type) => setForm({ ...form, translate_type })} />
+                </>}
                 <ProviderSelect label="TTS" value={form.tts_type} providers={providers?.tts ?? []} checks={checks} onChange={(tts_type) => setForm({ ...form, tts_type, voice_role: form.workflow_mode === 'multi-speaker' ? 'clone' : form.voice_role })} />
               </div>
             </div>
@@ -828,9 +923,10 @@ function App() {
                 <span>04</span>
                 <div>
                   <strong>Giọng đọc và xử lý audio</strong>
-                  <small>Clone voice, speaker split, vocal/background handling.</small>
+                  <small>{studioMode === 'srt_to_audio' ? 'Chọn giọng đọc từ TTS provider.' : 'Clone voice, speaker split, vocal/background handling.'}</small>
                 </div>
               </div>
+              {studioMode === 'video_translate' && <>
               <div className="clone-box">
               <div>
                 <strong>{'Lọc giọng nói / tách vocal'}</strong>
@@ -876,40 +972,33 @@ function App() {
                 </div>
               </div>
             )}
-            {form.workflow_mode === 'single' && <VoiceSelect
+            </>}
+            {(studioMode === 'srt_to_audio' || form.workflow_mode === 'single') && <VoiceSelect
               value={form.voice_role}
               voices={voices.length > 0 ? voices : [{ name: form.voice_role || 'No', value: form.voice_role || 'No', language: targetLanguageCode, gender: null }]}
               onChange={(voice_role) => setForm({ ...form, voice_role })}
             />}
-            {form.workflow_mode === 'single' && form.tts_type === 2 && (
-              <div className="clone-box">
-                <div>
-                  <strong>{'Clone gi\u1ecdng OmniVoice'}</strong>
-                  <small>{'Upload audio m\u1eabu v\u00e0 nh\u1eadp \u0111\u00fang c\u00e2u n\u00f3i trong audio. Role m\u1edbi s\u1ebd xu\u1ea5t hi\u1ec7n trong dropdown gi\u1ecdng \u0111\u1ecdc.'}</small>
-                </div>
-                <label className="field full">
-                  <span>Reference audio</span>
-                  <input type="file" accept="audio/*,.wav,.mp3,.m4a,.flac,.ogg" onChange={(event) => setCloneFile(event.target.files?.[0] ?? null)} />
-                </label>
-                <label className="field full">
-                  <span>Reference text</span>
-                  <input value={cloneRefText} placeholder={'C\u00e2u n\u00f3i trong audio m\u1eabu'} onChange={(event) => setCloneRefText(event.target.value)} />
-                </label>
-                <button className="secondary" type="button" disabled={!cloneFile || !cloneRefText.trim() || uploadingClone} onClick={uploadCloneReference}>
-                  {uploadingClone ? '\u0110ang upload...' : 'Upload clone voice'}
-                </button>
-              </div>
-            )}
             </div>
             <div className="submit-bar">
               <button className="primary" type="button" disabled={!canSubmit} onClick={submitJob}>
-                {loading ? 'Đang xử lý...' : 'Tạo job'}
+                {loading ? 'Đang xử lý...' : studioMode === 'srt_to_audio' ? 'Tạo audio' : 'Tạo job'}
               </button>
-              {!canSubmit && <small className="hint">Điền video path và chọn provider ready để chạy.</small>}
+              {!canSubmit && <small className="hint">Điền {studioMode === 'srt_to_audio' ? 'SRT/TXT path' : 'video path'} và chọn provider ready để chạy.</small>}
             </div>
           </section>
 
           <div className="side-stack">
+            <CloneVoiceLibrary
+              providers={providers?.tts ?? []}
+              selectedTtsType={cloneTtsType}
+              cloneFile={cloneFile}
+              cloneRefText={cloneRefText}
+              uploadingClone={uploadingClone}
+              onTtsTypeChange={setCloneTtsType}
+              onFileChange={setCloneFile}
+              onRefTextChange={setCloneRefText}
+              onUpload={uploadCloneReference}
+            />
             <div id="providers">
               <ProviderBoard providers={providers} checks={checks} />
             </div>

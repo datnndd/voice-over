@@ -37,19 +37,71 @@ class VieNeuTTS(BaseTTS):
         model_name = str(params.get('vieneu_model_name', '') or '').strip()
         if mode:
             kwargs['mode'] = mode
+        if (mode or 'standard') == 'standard':
+            local_model = self._cached_backbone_path()
+            if local_model:
+                kwargs['backbone_repo'] = local_model.as_posix()
         if api_base:
             kwargs['api_base'] = api_base
         if model_name:
             kwargs['model_name'] = model_name
         return kwargs
 
+    def _cached_backbone_path(self) -> Path | None:
+        cache_root = Path.home() / '.cache' / 'huggingface' / 'hub' / 'models--pnnbao-ump--VieNeu-TTS-v2' / 'snapshots'
+        if not cache_root.exists():
+            return None
+        matches = sorted(cache_root.glob('*/VieNeu-TTS-v2-Q4-K-M.gguf'), key=lambda item: item.stat().st_mtime, reverse=True)
+        return matches[0] if matches else None
+
+    def _patch_standard_local_backbone(self) -> None:
+        local_model = self._cached_backbone_path()
+        if not local_model:
+            return
+        try:
+            import vieneu.standard as standard
+            from llama_cpp import Llama
+        except Exception:
+            return
+        if getattr(standard.VieNeuTTS, '_voice_over_local_backbone_patch', False):
+            return
+        original = standard.VieNeuTTS._load_backbone
+
+        def load_backbone(instance, backbone_repo: str, backbone_device: str, hf_token=None, gguf_filename=None):
+            backbone_path = Path(backbone_repo)
+            should_load_cached = (
+                backbone_repo == 'pnnbao-ump/VieNeu-TTS-v2'
+                and (gguf_filename or '').endswith('.gguf')
+                and local_model.exists()
+            )
+            should_load_local_arg = backbone_path.exists() and backbone_path.suffix.lower() == '.gguf'
+            if should_load_cached or should_load_local_arg:
+                model_path = backbone_path if should_load_local_arg else local_model
+                normalized_device = standard.normalize_device(backbone_device)
+                logger.info(f'Loading cached VieNeu backbone from: {model_path} on {normalized_device} ...')
+                instance.backbone = Llama(
+                    model_path=model_path.as_posix(),
+                    verbose=False,
+                    n_gpu_layers=-1,
+                    n_ctx=instance.max_context,
+                    use_mlock=True,
+                    flash_attn=True if normalized_device in ('gpu', 'cuda') else False,
+                )
+                instance._is_quantized_model = True
+                return None
+            return original(instance, backbone_repo, backbone_device, hf_token, gguf_filename)
+
+        standard.VieNeuTTS._load_backbone = load_backbone
+        standard.VieNeuTTS._voice_over_local_backbone_patch = True
+
     def _get_client(self):
         if self._client is not None:
             return self._client
         try:
+            self._patch_standard_local_backbone()
             from vieneu import Vieneu
         except ImportError as exc:
-            raise StopTask('VieNeu-TTS dependency is missing. Install package: pip install vieneu') from exc
+            raise StopTask('VieNeu-TTS dependency is missing. Install packages: pip install vieneu "llama-cpp-python>=0.3.16"') from exc
         self._client = Vieneu(**self._client_kwargs())
         return self._client
 
@@ -74,9 +126,10 @@ class VieNeuTTS(BaseTTS):
             if hasattr(client, 'get_preset_voice'):
                 try:
                     return {'voice': client.get_preset_voice(role)}
-                except Exception:
-                    pass
-            return {'voice': role}
+                except Exception as exc:
+                    available = client.list_preset_voices() if hasattr(client, 'list_preset_voices') else []
+                    logger.warning(f'VieNeu preset voice not found: {role}. Available voices: {available}. Using default voice. Error: {exc}')
+                    return {}
         return {}
 
     @retry(retry=retry_if_not_exception_type(NO_RETRY_EXCEPT), stop=(stop_after_attempt(settings.get('retry_nums'))), wait=wait_fixed(2), before=before_log(logger, logging.INFO), after=after_log(logger, logging.INFO))

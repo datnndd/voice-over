@@ -30,6 +30,7 @@ providers = [
     "gradio-client>=1.0",
     "openai>=1.0",
     "vieneu>=3.0.4",
+    "llama-cpp-python>=0.3.16",
     "zhconv>=1.4",
 ]
 local-ai = [

@@ -23,6 +23,8 @@ This contract is the stable surface for the frontend. Backend internals and `app
 - `subtitle_translate`
 - `video_translate`
 
+`tts` is the SRT-to-audio workflow. It accepts a local `.srt` or `.txt` path plus TTS provider settings and returns an audio file.
+
 ## Job Status
 
 `status` must be one of:
@@ -108,6 +110,34 @@ Creates a queued job. Long processing is asynchronous.
 - `video_renew.<ext>`: direct copy of the source video.
 
 Extra fields are accepted as runtime pass-through for `app_core`, but frontend should rely only on stable fields above.
+
+### SRT-to-audio `tts` request
+
+```json
+{
+  "type": "tts",
+  "params": {
+    "name": "C:/Users/ddat2/Downloads/script.srt",
+    "target_language": "vi",
+    "target_language_code": "vi",
+    "tts_type": 28,
+    "voice_role": "HoaiMy(Female)",
+    "voice_autorate": false,
+    "remove_silent_mid": false,
+    "align_sub_audio": false
+  }
+}
+```
+
+Expected successful output:
+
+- `<srt-stem>.wav`: synthesized audio from subtitle text and timing.
+
+Frontend rule:
+
+- Provide a separate `SRT → audio` mode in the create-job form.
+- Require only SRT path, audio language, TTS provider, and voice role.
+- Submit `type: "tts"`; do not require STT or translator provider readiness for this mode.
 
 ### Response `202`
 
@@ -303,8 +333,8 @@ Multipart form data:
 
 Frontend rule:
 
-- Show this upload UI when `tts_type=2` OmniVoice or `tts_type=32` VieNeu-TTS is selected.
-- After upload, refresh `/voices?tts_type=2&language=...` or `/voices?tts_type=32&language=...` and select returned `name` as `voice_role`.
+- Show this upload UI as a separate voice library for clone-capable TTS providers such as `tts_type=2` OmniVoice and `tts_type=32` VieNeu-TTS.
+- After upload, refresh `/voices?tts_type=2&language=...` or `/voices?tts_type=32&language=...` and select returned `name` as `voice_role` for single voice.
 - Do not use `voice_role=clone` unless the core pipeline supplies per-line source references automatically.
 
 ## `GET /voices`

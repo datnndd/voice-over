@@ -39,7 +39,7 @@ def test_voices_endpoint_returns_vieneu_roles():
     names = [voice["name"] for voice in payload["voices"]]
     assert "No" in names
     assert "clone" in names
-    assert "Ngoc Lan" in names
+    assert "Ngoc" in names
 
 
 def test_upload_clone_reference_adds_omnivoice_role():
@@ -57,4 +57,7 @@ def test_upload_clone_reference_adds_omnivoice_role():
     assert payload["name"] == "sample.wav"
     names = [voice["name"] for voice in voices.json()["voices"]]
     assert "sample.wav" in names
-    Path(payload["path"]).unlink(missing_ok=True)
+    try:
+        Path(payload["path"]).unlink(missing_ok=True)
+    except PermissionError:
+        pass

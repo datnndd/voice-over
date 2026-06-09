@@ -45,7 +45,7 @@ PROVIDER_REQUIREMENTS = {
     },
     ("tts", tts.VIENEU_TTS): {
         "params": [],
-        "modules": ["vieneu"],
+        "modules": ["vieneu", "llama_cpp"],
     },
     ("translator", translator.CHATGPT_INDEX): {
         "params": ["chatgpt_key"],

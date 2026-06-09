@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 import datetime
 import json
 import logging
@@ -759,7 +759,7 @@ class AppParams:
             "vieneu_mode": "standard",
             "vieneu_api_base": "",
             "vieneu_model_name": "",
-            "vieneu_voice_roles": "Ngoc Lan,Xuan Vinh,Ngoc Linh",
+            "vieneu_voice_roles": "Binh,Tuyen,Vinh,Doan,Ly,Sơn,Ngoc",
             "fishtts_url": "",
             "f5tts_url": "",
             "f5tts_model": "",
